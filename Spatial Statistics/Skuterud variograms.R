@@ -27,12 +27,12 @@ coordinates(df) = ~x+y+z
 coordinates(dfK) = ~x+y+z
 
 
-vth=variogram(sfth~1,df, width=13)
+vth=variogram(sfth~1,df)
 plot(vth)
-vth60=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vth60=variogram(sfth~1,df, width=13, cutoff=61) #cutoff = distance where np first decreases
 plot(vth60)
 
-vth4=variogram(sfth~1,df, width=6, cutoff=62, alpha=c(0,45,90,135))
+vth4=variogram(sfth~1,df, width=13, cutoff=61, alpha=c(0,45,90,135))
 plot(vth4)
 
 vth.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
@@ -43,13 +43,13 @@ vth.fit
 vthns= vth.fit$psill[1]/vth.fit$psill[2] #nugget:sill ratio 
 
 
-vh=variogram(sfh~1,df, width=11) #alpha=c(0,45,90,135) width=8
+vh=variogram(sfh~1,df, width=13) #alpha=c(0,45,90,135) width=8
 plot(vh)
-vh70=variogram(sfh~1,df,width=11,cutoff=70)
+vh70=variogram(sfh~1,df,width=13,cutoff=60)
 plot(vh70)
 
-vh.fit<-fit.variogram(vh70,vgm(psill=0.20,"Sph",range=25, nugget=0.01))
-plot(vh,vh.fit)
+vh.fit<-fit.variogram(vh70,vgm(psill=0.20,"Sph",range=20, nugget=NA))
+plot(vh70,vh.fit)
 
 vh.fit
 
