@@ -93,3 +93,22 @@ vc.fit<-fit.variogram(vc,vgm(psill=15,"Sph",range=25, nugget=18))
 plot(vc,vc.fit)
 
 vc.fit
+
+
+# Variograms for predicted Ks values
+require(R.matlab)
+
+meas.coords<-read.csv("measurement coords.csv")
+
+mydata<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Ksat and K-6\\Mingming code predicted Ks values.mat")
+predK<-data.frame(mydata$ksPred)
+names(predK)<-unlist(mydata$KsMethod)
+
+coordinates(predK)<-meas.coords
+
+v<-list()
+for (i in 1:10){
+  v[[i]]<-variogram(predK[[i]]~1,predK)
+}
+
+
