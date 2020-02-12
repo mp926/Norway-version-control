@@ -31,6 +31,12 @@ coords$sfh<-c(0.864576000000000,	0.971884000000000,	1.15210000000000,	1.12877000
 
 
 
+ref.curve<-c(7.52E-8,0.3866,8.1052E-4,1.3723) #thr ths alpha n
+h=seq(from=0, to=100000, by=10)
+
+th.h=(1/(1+(ref.curve[3]*h)^ref.curve[4])^(1-1/ref.curve[4])) *((ref.curve[2]-ref.curve[1])+ref.curve[1])
+
+
 
 #steps:
 #get scaling factors
