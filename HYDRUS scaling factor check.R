@@ -39,7 +39,7 @@ coords$sfh_vogel<-c(0.664791945,	0.941863153,	0.964412213,	1.318137591,
                     0.973936319,	1.92580363,	0.847205593,	0.548736209,
                     1.243192025,	0.692536696,	1.922392978,	1.376337298,
                     2.478293116,	0.618971006)
-<<<<<<< HEAD
+
 
 coords$sfth_vogel<-c(1.104308745,	1.170248054,	1.001577179,	0.926627252,
                      1.243707086,	0.913310107,	0.9466684,	1.154476426,
@@ -58,8 +58,7 @@ plot(coords$sfth_krig,coords$sfth_vogel)
 abline(0,1)
 plot(coords$sfh_krig,coords$sfh_vogel)
 abline(0,1)
-=======
->>>>>>> 5da8b21e62ebbd6147c962d4d1227c007bea4f7f
+
 
 coords$sfth_vogel<-c(1.104308745,	1.170248054,	1.001577179,	0.926627252,
                      1.243707086,	0.913310107,	0.9466684,	1.154476426,
@@ -73,8 +72,6 @@ coords$sfth_vogel<-c(1.104308745,	1.170248054,	1.001577179,	0.926627252,
                      0.881364378,	1.141957675)
 
 
-#check scaling factors for bias
-plot(coords$sfth_krig,coords$)
 
 h.sc<-list()
 th.sc<-list()
@@ -89,8 +86,6 @@ for (i in 1:dim(coords)[1]){
 }
 points(log10(h),th.h)
 
-<<<<<<< HEAD
-=======
 ref.curve<-c(7.52E-8,0.3866,8.1052E-4,1.3723) #thr ths alpha n
 h=seq(from=0, to=100000, by=10)
 
@@ -108,8 +103,6 @@ for (i in 1:dim(coords)[1]){
   lines(log10(h.sc[[i]]),th.sc[[i]], col="red")
 }
 points(log10(h),th.h)
-
->>>>>>> 5da8b21e62ebbd6147c962d4d1227c007bea4f7f
 
 
 
