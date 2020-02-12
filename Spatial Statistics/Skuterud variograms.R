@@ -108,7 +108,7 @@ coordinates(predK)<-meas.coords
 
 v<-list()
 for (i in 1:10){
-  v[[i]]<-variogram(predK[[i]]~1,predK)
+  v[[i]]<-variogram(log10(predK[[i]]+0.0001)~1,predK)
 }
 names(v)<-unlist(mydata$KsMethod)
 
@@ -118,6 +118,6 @@ par(mfrow=c(5,2))
 for (i in 1:10){
   plot(v[[i]]$dist,v[[i]]$gamma)
   with(v[[i]][1:3,], text(gamma~dist, labels = np, pos = 4))
-  text(95, max(v[[i]]$gamma/10), unlist(mydata$KsMethod[i]), font=2)
+  text(95, max(v[[i]]$gamma), unlist(mydata$KsMethod[i]), font=2)
 }
 
