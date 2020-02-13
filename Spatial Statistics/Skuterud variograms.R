@@ -22,36 +22,75 @@ df$K100[1:121]<-K100
 dfK<-na.omit(df)
 
 names(df)<-c("x","y","z","sfh","sfth","sfK")
-names(dfK)<-c("x","y","z","sfh","sfth","sfK","K10","K30","K100")
-coordinates(df) = ~x+y+z
-coordinates(dfK) = ~x+y+z
+#names(dfK)<-c("x","y","z","sfh","sfth","sfK","K10","K30","K100")
+#coordinates(dfK) = ~x+y+z
 
 
-vth=variogram(sfth~1,df)
-plot(vth)
-vth60=variogram(sfth~1,df, width=13, cutoff=61) #cutoff = distance where np first decreases
-plot(vth60)
+## BOOTSTRAP THE VARIOGRAMS TO GET A BETTER REPRESENTATION OF SPATIAL VARIANCE -------------------------
 
-vth4=variogram(sfth~1,df, width=13, cutoff=61, alpha=c(0,45,90,135))
-plot(vth4)
+#Set up the bootstrapping
+
+n=50
+id=matrix(data=NA,nrow=13,ncol=n)
+df.adj<-list()
+coords.adj<-list()
+vth<-list()
+vth.fit<-list()
+SSE<-data.frame()
+
+# Perform the bootstrapping
+
+for(i in 1:50){
+id[,i]=sample(1:130,13,replace=FALSE) # random values to be removed for i=1...n simulations
+df.adj[[i]]<-df[-id[,i],] # adjusted data.frame with data removed 
+coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gstat
+
+
+vth[[i]]<-variogram(sfth~1,df.adj[[i]], width=13, cutoff=60) #calculate the variograms for each iteration
+vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=0.12, "Sph", range=28, nugget=0.008)) #fit each variogram
+SSE[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
+}
+
+coordinates(df)<- ~x+y+z
+vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vth.orig.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
+plot(vth.orig,vth.orig.fit)
+
+
+# ADD GEOM_RIBBON HERE 
+
+
+
+
+
+
 
 vth.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
-plot(vth60,vth.fit)
 
-vth.fit
+
+
+
+
+
+
+
+
+
+
+
+
 
 vthns= vth.fit$psill[1]/vth.fit$psill[2] #nugget:sill ratio 
 
 
 vh=variogram(sfh~1,df, width=13) #alpha=c(0,45,90,135) width=8
 plot(vh)
-vh70=variogram(sfh~1,df,width=13,cutoff=60)
-plot(vh70)
+vh60=variogram(sfh~1,df,width=13,cutoff=60)
+plot(vh60)
 
-vh.fit<-fit.variogram(vh70,vgm(psill=0.20,"Sph",range=20, nugget=NA))
+vh.fit<-fit.variogram(vh60,vgm(psill=0.20,"Sph",range=20, nugget=NA))
 plot(vh70,vh.fit)
 
-vh.fit
 
 vhns= vh.fit$psill[1]/vh.fit$psill[2]
 
