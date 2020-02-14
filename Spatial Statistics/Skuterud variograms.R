@@ -27,7 +27,7 @@ names(df)<-c("x","y","z","sfh","sfth","sfK")
 #coordinates(dfK) = ~x+y+z
 
 
-## BOOTSTRAP THE VARIOGRAMS TO GET A BETTER REPRESENTATION OF SPATIAL VARIANCE -------------------------
+## BOOTSTRAP THE VARIOGRAMS  ---------------------------------------------------
 
 #Set up the bootstrapping
 
@@ -36,10 +36,15 @@ id=matrix(data=NA,nrow=13,ncol=n)
 df.adj<-list()
 coords.adj<-list()
 vth<-list()
-init.range<-data.frame()
+vh<-list()
+init.rangeth<-data.frame()
+init.rangeh<-data.frame()
 vth.fit<-list()
-SSE<-data.frame()
-vmodel.lines<-list()
+vh.fit<-list()
+SSEth<-data.frame()
+SSEh<-data.frame()
+vmodel.linesth<-list()
+vmodel.linesh<-list()
 
 # Perform the bootstrapping
 
@@ -50,37 +55,54 @@ coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gsta
 
 
 vth[[i]]<-variogram(sfth~1,df.adj[[i]], width=13, cutoff=60) #calculate the variograms for each iteration
-ridx<-first((which(vth[[i]]$gamma>(var(df.adj[[i]]$sfth)-(var(df.adj[[i]]$sfth)*0.15))))) 
+vh[[i]]<-variogram(sfh~1,df.adj[[i]], width=13, cutoff=60)
+ridxth<-first((which(vth[[i]]$gamma>(var(df.adj[[i]]$sfth)-(var(df.adj[[i]]$sfth)*0.15))))) 
+ridxh<-first((which(vh[[i]]$gamma>(var(df.adj[[i]]$sfh)-(var(df.adj[[i]]$sfh)*0.15))))) 
 # The above range idx finds the lowest gamma value that is larger than the variance (sill) - 15% of the variance
-init.range[i,1]<-vth[[i]][ridx,]$dist #This pulls out the initial guess for range
+init.rangeth[i,1]<-vth[[i]][ridxth,]$dist #This pulls out the initial guess for range
+init.rangeh[i,1]<-vh[[i]][ridxh,]$dist
 
-vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Sph", range=init.range[i,1],
+vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Sph", range=init.rangeth[i,1],
                                           nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
-SSE[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
-vmodel.lines[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=200) # simulate model line output for plotting
+vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=var(df.adj[[i]]$sfh), "Sph", range=init.rangeh[i,1],
+                                          nugget=vh[[i]]$gamma[1]/1.2))
+
+SSEth[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
+SSEh[i,1]<-attr(vh.fit[[i]],"SSErr")
+
+vmodel.linesth[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=200) # simulate model line output for plotting
+vmodel.linesh[[i]]<-variogramLine(vh.fit[[i]],maxdist=60,n=200)
 }
 
-# save the global environment in case this specific bootstrap output is needed again 
-save.image(file="SKUvarioEnvironment.RData")
 
 
 # Plot the bootstrapped variogram model confidence intervals
 
 
-dist<-vmodel.lines[[1]]$dist # The distance values are constant
+dist.th<-vmodel.linesth[[1]]$dist # The distance values are constant
+dist.h<-vmodel.linesh[[1]]$dist
 
-vals<-matrix(nrow=n,ncol=200)
-error90<-1
-error95<-1
-error99<-1
+vals.th<-matrix(nrow=n,ncol=200)
+vals.h<-matrix(nrow=n,ncol=200)
+error90th<-1
+error95th<-1
+error99th<-1
+error90h<-1
+error95h<-1
+error99h<-1
 
 for (i in 1:n){
-  for (j in 1:length(vmodel.lines[[i]]$dist)){
+  for (j in 1:length(vmodel.linesth[[i]]$dist)){
   
-  vals[i,]<-vmodel.lines[[i]]$gamma  
-  error90[j] <- qnorm(0.950)*sd(vals[,j])/sqrt(n) # 90% confidence interval calculation 
-  error95[j] <- qnorm(0.975)*sd(vals[,j])/sqrt(n) # 95% confidence interval calculation 
-  error99[j] <- qnorm(0.995)*sd(vals[,j])/sqrt(n) # 99% confidence interval calculation 
+  vals.th[i,]<-vmodel.linesth[[i]]$gamma
+  vals.h[i,]<-vmodel.linesh[[i]]$gamma 
+  error90th[j] <- qnorm(0.950)*sd(vals.th[,j])/sqrt(n) # 90% confidence interval calculation 
+  error95th[j] <- qnorm(0.975)*sd(vals.th[,j])/sqrt(n) # 95% confidence interval calculation 
+  error99th[j] <- qnorm(0.995)*sd(vals.th[,j])/sqrt(n) # 99% confidence interval calculation 
+  error90h[j] <- qnorm(0.950)*sd(vals.h[,j])/sqrt(n)
+  error95h[j] <- qnorm(0.975)*sd(vals.h[,j])/sqrt(n) 
+  error99h[j] <- qnorm(0.995)*sd(vals.h[,j])/sqrt(n) 
+  
   
   }
 }
@@ -88,45 +110,46 @@ for (i in 1:n){
 
 coordinates(df)<- ~x+y+z
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
-vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
-origmodel.lines<-variogramLine(vth.orig.fit,maxdist=60,n=200)
+vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Sph",range=45, nugget=0.10),fit.ranges=FALSE)
+origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200)
 
-
-plot(vth.orig$dist,vth.orig$gamma, ylim=c(0.010,0.019), pch=16)
-lines(origmodel.lines$dist,origmodel.lines$gamma, col="red")
-lines(dist,origmodel.lines$gamma-error90, lty=2, lwd=2)
-lines(dist,origmodel.lines$gamma+error90, lty=2, lwd=2)
-lines(dist,origmodel.lines$gamma-error95, lty=3, lwd=2)
-lines(dist,origmodel.lines$gamma+error95, lty=3, lwd=2)
-lines(dist,origmodel.lines$gamma-error99, lty=4, lwd=2)
-lines(dist,origmodel.lines$gamma+error99, lty=4, lwd=2)
+vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vh.orig.fit<-fit.variogram(vh.orig,vgm(psill=0.12,"Sph",range=20, nugget=0.08))
+origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
 
 
 
+plot(vth.orig$dist,vth.orig$gamma, xlim=c(0,60),ylim=c(0,0.019), pch=16,
+     ylab=expression(gamma), xlab="lag distance (cm)", main=expression("Variogram" ~ SF[theta]))
+lines(origmodel.lines.th$dist,origmodel.lines.th$gamma, col="red")
+lines(dist.th,origmodel.lines.th$gamma-error90th, lty=2, lwd=2)
+lines(dist.th,origmodel.lines.th$gamma+error90th, lty=2, lwd=2)
+lines(dist.th,origmodel.lines.th$gamma-error95th, lty=5, lwd=2)
+lines(dist.th,origmodel.lines.th$gamma+error95th, lty=5, lwd=2)
+lines(dist.th,origmodel.lines.th$gamma-error99th, lty=6, lwd=2)
+lines(dist.th,origmodel.lines.th$gamma+error99th, lty=6, lwd=2)
+legend("bottomright", legend=c("90% C.I.", "95% C.I.", "99% C.I."), lty=c(2,5,6))
 
-vh=variogram(sfh~1,df, width=13) #alpha=c(0,45,90,135) width=8
-plot(vh)
-vh60=variogram(sfh~1,df,width=13,cutoff=60)
-plot(vh60)
-
-vh.fit<-fit.variogram(vh60,vgm(psill=0.20,"Sph",range=20, nugget=NA))
-plot(vh70,vh.fit)
 
 
-vhns= vh.fit$psill[1]/vh.fit$psill[2]
+plot(vh.orig$dist,vh.orig$gamma, xlim=c(0,60),ylim=c(0,0.25), pch=16,
+     ylab=expression(gamma), xlab="lag distance (cm)", main=expression("Variogram" ~ SF[h]))
+lines(origmodel.lines.h$dist,origmodel.lines.h$gamma, col="red")
+lines(dist.h,origmodel.lines.h$gamma-error90h, lty=2, lwd=2)
+lines(dist.h,origmodel.lines.h$gamma+error90h, lty=2, lwd=2)
+lines(dist.h,origmodel.lines.h$gamma-error95h, lty=5, lwd=2)
+lines(dist.h,origmodel.lines.h$gamma+error95h, lty=5, lwd=2)
+lines(dist.h,origmodel.lines.h$gamma-error99h, lty=6, lwd=2)
+lines(dist.h,origmodel.lines.h$gamma+error99h, lty=6, lwd=2)
+legend("bottomright", legend=c("90% C.I.", "95% C.I.", "99% C.I."), lty=c(2,5,6))
 
 
-vK=variogram(sfK~1,dfK) #alpha=c(0,45,90,135) width=8
-plot(vK)
+# save the global environment in case this specific bootstrap output is needed again 
+save.image(file="SKUvarioEnvironment.RData")
 
-vK.fit<-fit.variogram(vK,vgm(psill=4,"Exp",range=10, nugget=0))
-plot(vK,vK.fit)
 
-vK.fit
 
-vKns= vK.fit$psill[1]/vK.fit$psill[2]
-
-#Variograms for conductivity data do not make sense, no matter what is done for them
+# Variograms for conductivity and clay -----------------------------------------------
 
 
 vK10=variogram(K10~x+y+z,dfK)
@@ -137,22 +160,6 @@ plot(vK10)
 plot(vK30)
 plot(vK100)
 
-
-
-# Clay content
-clay<-data.frame(read.table(paste(path,"\\clay content points.dat", sep=""), sep="", skip=6))
-
-names(clay)<-c("x","y","z","cl")
-coordinates(clay) = ~x+y+z
-
-
-vc=variogram(cl~1,clay, width=13, cutoff=60)
-plot(vc)
-
-vc.fit<-fit.variogram(vc,vgm(psill=15,"Sph",range=25, nugget=18))
-plot(vc,vc.fit)
-
-vc.fit
 
 
 # Variograms for predicted Ks values
@@ -179,5 +186,26 @@ for (i in 1:10){
   plot(v[[i]]$dist,v[[i]]$gamma)
   with(v[[i]][1:3,], text(gamma~dist, labels = np, pos = 4))
   text(95, max(v[[i]]$gamma), unlist(mydata$KsMethod[i]), font=2)
+
+
+
+
+# Clay content
+clay<-data.frame(read.table(paste(path,"\\clay content points.dat", sep=""), sep="", skip=6))
+
+names(clay)<-c("x","y","z","cl")
+coordinates(clay) = ~x+y+z
+
+
+vc=variogram(cl~1,clay, width=13, cutoff=60)
+plot(vc)
+
+vc.fit<-fit.variogram(vc,vgm(psill=15,"Sph",range=25, nugget=18))
+plot(vc,vc.fit)
+
+vc.fit
+
+
+
 }
 
