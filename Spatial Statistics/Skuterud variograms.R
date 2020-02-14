@@ -38,11 +38,12 @@ vth<-list()
 init.range<-data.frame()
 vth.fit<-list()
 SSE<-data.frame()
+vmodel.lines<-list()
 
 # Perform the bootstrapping
 
 for(i in 1:50){
-id[,i]=sample(1:130,13,replace=FALSE) # random values to be removed for i=1...n simulations
+id[,i]=sample(1:130,13,replace=FALSE) # 10% of spatial data values removed for i=1...n simulations
 df.adj[[i]]<-df[-id[,i],] # adjusted data.frame with data removed 
 coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gstat
 
@@ -55,6 +56,7 @@ init.range[i,1]<-vth[[i]][ridx,]$dist #This pulls out the initial guess for rang
 vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Sph", range=init.range[i,1],
                                           nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
 SSE[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
+vmodel.lines[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=5) # simulate model line output for plotting
 }
 
 coordinates(df)<- ~x+y+z
@@ -64,11 +66,19 @@ plot(vth.orig,vth.orig.fit)
 
 
 
-# ADD GEOM_RIBBON HERE 
+dist<-vmodel.lines[[1]]$dist # The distance values are constant
 
+vals<-matrix(nrow=50,ncol=5)
+error<-1
 
-
-error <- qnorm(0.975)*s/sqrt(n) # 95% confidence interval calculation ; s=stdev 
+for (i in 1:n){
+  for (j in 1:length(vmodel.lines[[i]]$dist)){
+  
+  vals[i,]<-vmodel.lines[[i]]$gamma  
+  error[j] <- qnorm(0.975)*sd(vals[,j])/sqrt(n) # 95% confidence interval calculation ; s=stdev 
+  
+  }
+}
 
 
 
