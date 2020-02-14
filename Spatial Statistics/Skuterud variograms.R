@@ -1,6 +1,6 @@
 library(gstat)
 library(sp)
-
+library(ggplot2)
 
 
 path<-("C:\\Users\\Matt\\Documents\\Norway\\SGeMS files")
@@ -35,6 +35,7 @@ id=matrix(data=NA,nrow=13,ncol=n)
 df.adj<-list()
 coords.adj<-list()
 vth<-list()
+init.range<-data.frame()
 vth.fit<-list()
 SSE<-data.frame()
 
@@ -47,7 +48,12 @@ coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gsta
 
 
 vth[[i]]<-variogram(sfth~1,df.adj[[i]], width=13, cutoff=60) #calculate the variograms for each iteration
-vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=0.12, "Sph", range=28, nugget=0.008)) #fit each variogram
+ridx<-first((which(vth[[i]]$gamma>(var(df.adj[[i]]$sfth)-(var(df.adj[[i]]$sfth)*0.15))))) 
+# The above range idx finds the lowest gamma value that is larger than the variance (sill) - 15% of the variance
+init.range[i,1]<-vth[[i]][ridx,]$dist #This pulls out the initial guess for range
+
+vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Sph", range=init.range[i,1],
+                                          nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
 SSE[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
 }
 
@@ -57,23 +63,18 @@ vth.orig.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),f
 plot(vth.orig,vth.orig.fit)
 
 
+
 # ADD GEOM_RIBBON HERE 
 
 
+
+error <- qnorm(0.975)*s/sqrt(n) # 95% confidence interval calculation ; s=stdev 
 
 
 
 
 
 vth.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
-
-
-
-
-
-
-
-
 
 
 
