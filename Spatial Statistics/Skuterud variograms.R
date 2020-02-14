@@ -92,14 +92,15 @@ vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.12,"Sph",range=28, nugget=0.008
 origmodel.lines<-variogramLine(vth.orig.fit,maxdist=60,n=200)
 
 
-g.vth<-ggplot() +
-  geom_point(data=vth.orig, aes(x=dist, y=gamma)) +
-  geom_line(data=origmodel.lines, aes(x=dist, y=gamma), lwd=1.2) +
-  geom_ribbon(aes(ymin=origmodel.lines$gamma-error90, ymax=origmodel.lines$gamma+error90, x=dist), linetype=1, alpha = 0.1) +
-  geom_ribbon(aes(ymin=origmodel.lines$gamma-error95, ymax=origmodel.lines$gamma+error95, x=dist), linetype=2, alpha = 0.1) +
-  geom_ribbon(aes(ymin=origmodel.lines$gamma-error99, ymax=origmodel.lines$gamma+error99, x=dist), linetype=3, alpha = 0.1)
+plot(vth.orig$dist,vth.orig$gamma, ylim=c(0.010,0.019), pch=16)
+lines(origmodel.lines$dist,origmodel.lines$gamma, col="red")
+lines(dist,origmodel.lines$gamma-error90, lty=2, lwd=2)
+lines(dist,origmodel.lines$gamma+error90, lty=2, lwd=2)
+lines(dist,origmodel.lines$gamma-error95, lty=3, lwd=2)
+lines(dist,origmodel.lines$gamma+error95, lty=3, lwd=2)
+lines(dist,origmodel.lines$gamma-error99, lty=4, lwd=2)
+lines(dist,origmodel.lines$gamma+error99, lty=4, lwd=2)
 
-g.vth
 
 
 
