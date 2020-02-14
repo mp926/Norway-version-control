@@ -1,6 +1,7 @@
 library(gstat)
 library(sp)
 library(ggplot2)
+library(dplyr)
 
 
 path<-("C:\\Users\\Matt\\Documents\\Norway\\SGeMS files")
@@ -56,42 +57,50 @@ init.range[i,1]<-vth[[i]][ridx,]$dist #This pulls out the initial guess for rang
 vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Sph", range=init.range[i,1],
                                           nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
 SSE[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
-vmodel.lines[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=5) # simulate model line output for plotting
+vmodel.lines[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=200) # simulate model line output for plotting
 }
 
-coordinates(df)<- ~x+y+z
-vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
-vth.orig.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
-plot(vth.orig,vth.orig.fit)
+# save the global environment in case this specific bootstrap output is needed again 
+save.image(file="SKUvarioEnvironment.RData")
 
+
+# Plot the bootstrapped variogram model confidence intervals
 
 
 dist<-vmodel.lines[[1]]$dist # The distance values are constant
 
-vals<-matrix(nrow=50,ncol=5)
-error<-1
+vals<-matrix(nrow=n,ncol=200)
+error90<-1
+error95<-1
+error99<-1
 
 for (i in 1:n){
   for (j in 1:length(vmodel.lines[[i]]$dist)){
   
   vals[i,]<-vmodel.lines[[i]]$gamma  
-  error[j] <- qnorm(0.975)*sd(vals[,j])/sqrt(n) # 95% confidence interval calculation ; s=stdev 
+  error90[j] <- qnorm(0.950)*sd(vals[,j])/sqrt(n) # 90% confidence interval calculation 
+  error95[j] <- qnorm(0.975)*sd(vals[,j])/sqrt(n) # 95% confidence interval calculation 
+  error99[j] <- qnorm(0.995)*sd(vals[,j])/sqrt(n) # 99% confidence interval calculation 
   
   }
 }
 
 
+coordinates(df)<- ~x+y+z
+vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
+origmodel.lines<-variogramLine(vth.orig.fit,maxdist=60,n=200)
 
 
+g.vth<-ggplot() +
+  geom_point(data=vth.orig, aes(x=dist, y=gamma)) +
+  geom_line(data=origmodel.lines, aes(x=dist, y=gamma), lwd=1.2) +
+  geom_ribbon(aes(ymin=origmodel.lines$gamma-error90, ymax=origmodel.lines$gamma+error90, x=dist), linetype=1, alpha = 0.1) +
+  geom_ribbon(aes(ymin=origmodel.lines$gamma-error95, ymax=origmodel.lines$gamma+error95, x=dist), linetype=2, alpha = 0.1) +
+  geom_ribbon(aes(ymin=origmodel.lines$gamma-error99, ymax=origmodel.lines$gamma+error99, x=dist), linetype=3, alpha = 0.1)
 
-vth.fit<-fit.variogram(vth60,vgm(psill=0.12,"Sph",range=28, nugget=0.008),fit.ranges=FALSE)
+g.vth
 
-
-
-
-
-
-vthns= vth.fit$psill[1]/vth.fit$psill[2] #nugget:sill ratio 
 
 
 vh=variogram(sfh~1,df, width=13) #alpha=c(0,45,90,135) width=8
