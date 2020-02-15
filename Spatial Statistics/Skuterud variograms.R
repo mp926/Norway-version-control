@@ -62,7 +62,7 @@ ridxh<-first((which(vh[[i]]$gamma>(var(df.adj[[i]]$sfh)-(var(df.adj[[i]]$sfh)*0.
 init.rangeth[i,1]<-vth[[i]][ridxth,]$dist #This pulls out the initial guess for range
 init.rangeh[i,1]<-vh[[i]][ridxh,]$dist
 
-vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Sph", range=init.rangeth[i,1],
+vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Exp", range=init.rangeth[i,1],
                                           nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
 vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=var(df.adj[[i]]$sfh), "Sph", range=init.rangeh[i,1],
                                           nugget=vh[[i]]$gamma[1]/1.2))
@@ -110,7 +110,7 @@ for (i in 1:n){
 
 coordinates(df)<- ~x+y+z
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
-vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Sph",range=45, nugget=0.10),fit.ranges=FALSE)
+vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
 origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200)
 
 vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
@@ -145,6 +145,9 @@ legend("bottomright", legend=c("90% C.I.", "95% C.I.", "99% C.I."), lty=c(2,5,6)
 
 
 # save the global environment in case this specific bootstrap output is needed again 
+cwd<-getwd()
+path<-paste(cwd,"/Spatial Statistics", sep="")
+setwd(path)
 save.image(file="SKUvarioEnvironment.RData")
 
 
