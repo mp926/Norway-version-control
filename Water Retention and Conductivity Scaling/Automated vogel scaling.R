@@ -28,7 +28,7 @@ theta.v.lab<-list()
   theta.v.lab[[i]]<-theta.v[[i]]
 }
 
-# Write lab water retentions to file
+# Write lab water retentions to file (if needed)
 
 setwd(path)
 
