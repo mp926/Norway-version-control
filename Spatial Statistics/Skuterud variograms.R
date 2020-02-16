@@ -60,16 +60,16 @@ vmodel.linesK<-list()
 # Perform the bootstrapping
 
 for(i in 1:50){
-rand.id[,i]=sample(1:130,13,replace=FALSE) # 10% of spatial data values removed for i=1...n simulations
-df.adj[[i]]<-df[-rand.id[,i],] # adjusted data.frame with data removed 
-coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gstat
+# rand.id[,i]=sample(1:130,13,replace=FALSE) # 10% of spatial data values removed for i=1...n simulations
+# df.adj[[i]]<-df[-rand.id[,i],] # adjusted data.frame with data removed 
+# coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gstat
 
 
 vth[[i]]<-variogram(sfth~1,df.adj[[i]], width=13, cutoff=60) #calculate the variograms for each iteration
 vh[[i]]<-variogram(sfh~1,df.adj[[i]], width=13, cutoff=60)
 vK[[i]]<-variogram(Ks~1,df.adj[[i]], cutoff=60)
-ridxth<-first((which(vth[[i]]$gamma>(var(df.adj[[i]]$sfth)-(var(df.adj[[i]]$sfth)*0.15))))) 
-ridxh<-first((which(vh[[i]]$gamma>(var(df.adj[[i]]$sfh)-(var(df.adj[[i]]$sfh)*0.15))))) 
+ridxth<-first((which(vth[[i]]$gamma>(var(df.adj[[i]]$sfth)-(var(df.adj[[i]]$sfth)*0.15)))))
+ridxh<-first((which(vh[[i]]$gamma>(var(df.adj[[i]]$sfh)-(var(df.adj[[i]]$sfh)*0.15)))))
 ridxK<-first((which(vK[[i]]$gamma[2:length(vK[[i]]$gamma)]>(var(df.adj[[i]]$Ks)-(var(df.adj[[i]]$Ks)*0.15))))) 
 # The above range idx finds the lowest gamma value that is larger than the variance (sill) - 15% of the variance
 # ridxK is modified because the first value is extremely high, so we skip it
@@ -78,11 +78,11 @@ init.rangeh[i,1]<-vh[[i]][ridxh,]$dist
 init.rangeK[i,1]<-vK[[i]][ridxK,]$dist
 
 vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Exp", range=init.rangeth[i,1],
-                                          nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
+                                        nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
 vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=var(df.adj[[i]]$sfh), "Sph", range=init.rangeh[i,1],
-                                          nugget=vh[[i]]$gamma[1]/1.2))
+                                        nugget=vh[[i]]$gamma[1]/1.2))
 vK.fit[[i]]<-fit.variogram(vK[[i]], vgm(psill=var(df.adj[[i]]$Ks), "Lin", range=init.rangeK[i,1],
-                                        nugget=vK[[i]]$gamma[1]/1.2), fit.ranges=FALSE)
+                                        nugget=vK[[i]]$gamma[1]/1.2),fit.method=6) # fitted with OLS
 
 SSEth[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
 SSEh[i,1]<-attr(vh.fit[[i]],"SSErr")
@@ -119,14 +119,14 @@ for (i in 1:n){
   for (j in 1:length(vmodel.linesth[[i]]$dist)){
   
   vals.th[i,]<-vmodel.linesth[[i]]$gamma
-  vals.h[i,]<-vmodel.linesh[[i]]$gamma 
+  vals.h[i,]<-vmodel.linesh[[i]]$gamma
   vals.K[i,]<-vmodel.linesK[[i]]$gamma 
-  error90th[j] <- qnorm(0.950)*sd(vals.th[,j])/sqrt(n) # 90% confidence interval calculation 
-  error95th[j] <- qnorm(0.975)*sd(vals.th[,j])/sqrt(n) # 95% confidence interval calculation 
-  error99th[j] <- qnorm(0.995)*sd(vals.th[,j])/sqrt(n) # 99% confidence interval calculation 
-  error90h[j] <- qnorm(0.950)*sd(vals.h[,j])/sqrt(n)
-  error95h[j] <- qnorm(0.975)*sd(vals.h[,j])/sqrt(n) 
-  error99h[j] <- qnorm(0.995)*sd(vals.h[,j])/sqrt(n) 
+ error90th[j] <- qnorm(0.950)*sd(vals.th[,j])/sqrt(n) # 90% confidence interval calculation
+ error95th[j] <- qnorm(0.975)*sd(vals.th[,j])/sqrt(n) # 95% confidence interval calculation
+ error99th[j] <- qnorm(0.995)*sd(vals.th[,j])/sqrt(n) # 99% confidence interval calculation
+ error90h[j] <- qnorm(0.950)*sd(vals.h[,j])/sqrt(n)
+ error95h[j] <- qnorm(0.975)*sd(vals.h[,j])/sqrt(n)
+ error99h[j] <- qnorm(0.995)*sd(vals.h[,j])/sqrt(n)
   error90K[j] <- qnorm(0.950)*sd(vals.K[,j])/sqrt(n)
   error95K[j] <- qnorm(0.975)*sd(vals.K[,j])/sqrt(n) 
   error99K[j] <- qnorm(0.995)*sd(vals.K[,j])/sqrt(n) 
@@ -145,8 +145,8 @@ vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np fir
 vh.orig.fit<-fit.variogram(vh.orig,vgm(psill=0.12,"Sph",range=20, nugget=0.08))
 origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
 
-vK.orig=variogram(Ks~1,df) #cutoff = distance where np first decreases
-vK.orig.fit<-fit.variogram(vK.orig,vgm(psill=100000,"Exp",range=1, nugget=400000))
+vK.orig=variogram(Ks~1,df, cutoff=60) #cutoff = distance where np first decreases
+vK.orig.fit<-fit.variogram(vK.orig,vgm(psill=100000,"Exp",range=1, nugget=300000), fit.method=6) #OLS
 origmodel.lines.K<-variogramLine(vK.orig.fit,maxdist=100,n=200)
 
 
@@ -163,7 +163,7 @@ lines(dist.th,origmodel.lines.th$gamma+error99th, lty=6, lwd=2)
 legend("bottomright", legend=c("90% C.I.", "95% C.I.", "99% C.I."), lty=c(2,5,6))
 
 
-
+ 
 plot(vh.orig$dist,vh.orig$gamma, xlim=c(0,60),ylim=c(0,0.25), pch=16,
      ylab=expression(gamma), xlab="lag distance (cm)", main=expression("Variogram" ~ SF[h]))
 lines(origmodel.lines.h$dist,origmodel.lines.h$gamma, col="red")
@@ -175,7 +175,7 @@ lines(dist.h,origmodel.lines.h$gamma-error99h, lty=6, lwd=2)
 lines(dist.h,origmodel.lines.h$gamma+error99h, lty=6, lwd=2)
 legend("bottomright", legend=c("90% C.I.", "95% C.I.", "99% C.I."), lty=c(2,5,6))
 
-plot(vK.orig$dist,vK.orig$gamma, pch=16,
+plot(vK.orig$dist,vK.orig$gamma, pch=16, ylim=c(0,1000000),
      ylab=expression(gamma), xlab="lag distance (cm)", main=expression("Variogram" ~ K[s] ~ "[cm/d]"))
 lines(origmodel.lines.K$dist,origmodel.lines.K$gamma, col="red")
 lines(dist.K,origmodel.lines.K$gamma-error90K, lty=2, lwd=2)
