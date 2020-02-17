@@ -37,8 +37,8 @@ names(dfK)<-c("x","y","z","sfh","sfth","sfK","Ks","K10","K30","K100")
 
 #Set up the bootstrapping
 
-n=50
-rand.id=matrix(data=NA,nrow=13,ncol=n)
+n=1000
+rand.id=matrix(data=NA,nrow=26,ncol=n)
 df.adj<-list()
 coords.adj<-list()
 vth<-list()
@@ -60,37 +60,42 @@ vmodel.linesK<-list()
 # Perform the bootstrapping
 
 for(i in 1:50){
-# rand.id[,i]=sample(1:130,13,replace=FALSE) # 10% of spatial data values removed for i=1...n simulations
-# df.adj[[i]]<-df[-rand.id[,i],] # adjusted data.frame with data removed 
-# coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gstat
+rand.id[,i]=sample(1:130,26,replace=TRUE) # 10% of spatial data values removed for i=1...n simulations
+df.adj[[i]]<-df[-rand.id[,i],] # adjusted data.frame with data removed
+coordinates(df.adj[[i]])<- ~x+y+z #convert each data.frame to geoObject for gstat
 
 
 vth[[i]]<-variogram(sfth~1,df.adj[[i]], width=13, cutoff=60) #calculate the variograms for each iteration
 vh[[i]]<-variogram(sfh~1,df.adj[[i]], width=13, cutoff=60)
-vK[[i]]<-variogram(Ks~1,df.adj[[i]], cutoff=60)
+#vK[[i]]<-variogram(Ks~1,df.adj[[i]], cutoff=60)
 ridxth<-first((which(vth[[i]]$gamma>(var(df.adj[[i]]$sfth)-(var(df.adj[[i]]$sfth)*0.15)))))
 ridxh<-first((which(vh[[i]]$gamma>(var(df.adj[[i]]$sfh)-(var(df.adj[[i]]$sfh)*0.15)))))
-ridxK<-first((which(vK[[i]]$gamma[2:length(vK[[i]]$gamma)]>(var(df.adj[[i]]$Ks)-(var(df.adj[[i]]$Ks)*0.15))))) 
+#ridxK<-first((which(vK[[i]]$gamma[2:length(vK[[i]]$gamma)]>(var(df.adj[[i]]$Ks)-(var(df.adj[[i]]$Ks)*0.15))))) 
 # The above range idx finds the lowest gamma value that is larger than the variance (sill) - 15% of the variance
 # ridxK is modified because the first value is extremely high, so we skip it
 init.rangeth[i,1]<-vth[[i]][ridxth,]$dist #This pulls out the initial guess for range
 init.rangeh[i,1]<-vh[[i]][ridxh,]$dist
-init.rangeK[i,1]<-vK[[i]][ridxK,]$dist
+#init.rangeK[i,1]<-vK[[i]][ridxK,]$dist
 
 vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=var(df.adj[[i]]$sfth), "Exp", range=init.rangeth[i,1],
                                         nugget=vth[[i]]$gamma[1]/1.2)) #fit each variogram
+
+
+#SUMMARY STATISTICS FOR JUSTIFICATION OF MODEL SELECTION
+
+
 vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=var(df.adj[[i]]$sfh), "Sph", range=init.rangeh[i,1],
                                         nugget=vh[[i]]$gamma[1]/1.2))
-vK.fit[[i]]<-fit.variogram(vK[[i]], vgm(psill=var(df.adj[[i]]$Ks), "Lin", range=init.rangeK[i,1],
-                                        nugget=vK[[i]]$gamma[1]/1.2),fit.method=6) # fitted with OLS
+#vK.fit[[i]]<-fit.variogram(vK[[i]], vgm(psill=var(df.adj[[i]]$Ks), "Lin", range=init.rangeK[i,1],
+                                        #nugget=vK[[i]]$gamma[1]/1.2),fit.method=6) # fitted with OLS
 
 SSEth[i,1]<-attr(vth.fit[[i]],"SSErr") #obtain the sum square errors of each fitted variogram
 SSEh[i,1]<-attr(vh.fit[[i]],"SSErr")
-SSEK[i,1]<-attr(vh.fit[[i]],"SSErr")
+#SSEK[i,1]<-attr(vh.fit[[i]],"SSErr")
 
 vmodel.linesth[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=200) # simulate model line output for plotting
 vmodel.linesh[[i]]<-variogramLine(vh.fit[[i]],maxdist=60,n=200)
-vmodel.linesK[[i]]<-variogramLine(vK.fit[[i]],maxdist=100,n=200)
+#vmodel.linesK[[i]]<-variogramLine(vK.fit[[i]],maxdist=100,n=200)
 }
 
 
@@ -120,16 +125,16 @@ for (i in 1:n){
   
   vals.th[i,]<-vmodel.linesth[[i]]$gamma
   vals.h[i,]<-vmodel.linesh[[i]]$gamma
-  vals.K[i,]<-vmodel.linesK[[i]]$gamma 
+  #vals.K[i,]<-vmodel.linesK[[i]]$gamma 
  error90th[j] <- qnorm(0.950)*sd(vals.th[,j])/sqrt(n) # 90% confidence interval calculation
  error95th[j] <- qnorm(0.975)*sd(vals.th[,j])/sqrt(n) # 95% confidence interval calculation
  error99th[j] <- qnorm(0.995)*sd(vals.th[,j])/sqrt(n) # 99% confidence interval calculation
  error90h[j] <- qnorm(0.950)*sd(vals.h[,j])/sqrt(n)
  error95h[j] <- qnorm(0.975)*sd(vals.h[,j])/sqrt(n)
  error99h[j] <- qnorm(0.995)*sd(vals.h[,j])/sqrt(n)
-  error90K[j] <- qnorm(0.950)*sd(vals.K[,j])/sqrt(n)
-  error95K[j] <- qnorm(0.975)*sd(vals.K[,j])/sqrt(n) 
-  error99K[j] <- qnorm(0.995)*sd(vals.K[,j])/sqrt(n) 
+ # error90K[j] <- qnorm(0.950)*sd(vals.K[,j])/sqrt(n)
+ # error95K[j] <- qnorm(0.975)*sd(vals.K[,j])/sqrt(n) 
+ # error99K[j] <- qnorm(0.995)*sd(vals.K[,j])/sqrt(n) 
   
   
   }
