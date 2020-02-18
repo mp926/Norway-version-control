@@ -63,26 +63,30 @@ Ks<-read_excel("C:\\Users\\Matt\\Documents\\Norway\\Ksat and K-6\\Compiled Ksat 
                sheet="Compiled", col_names=TRUE)
 
 
-# exclude Ks values that are less than 1 cm/d (low outliers)
-idx<-which(Ks[,2]>1)
-df.par$Ks[idx]<-Ks$`Ksat (cm/d)`[idx]
-df.par$tau[idx]<-0.5
+df.par$Ks<-Ks$`Ksat (cm/d)`
+df.par$tau<-rep(0.5,times=130)
 
+
+
+# exclude Ks values that are less than 1 cm/d (low outliers)
+# idx<-which(Ks[,2]>1)
+# df.par$Ks[idx]<-Ks$`Ksat (cm/d)`[idx]
+# df.par$tau[idx]<-0.5
 
 
 # Apply function Conductivity.R to determine conductivity curves -----------------
 source("C:\\Users\\Matt\\Documents\\Clustering ERT paper\\Paper 2 - Geometry and Structure\\Submission codes and data\\Conductivity.R")
 
 K<-list()
-K10<-1
-K30<-1
-K100<-1
+#K10<-1
+#K30<-1
+#K100<-1
 
 for (i in 1:length(df.par$thr)){
   K[[i]]<-Conductivity(df.par[i,],h.cm[[i]])
-  K10[i]<-K[[i]][which(h.cm[[i]]==10)]
-  K30[i]<-K[[i]][which(h.cm[[i]]==30)]
-  K100[i]<-K[[i]][which(h.cm[[i]]==100)]
+  #K10[i]<-K[[i]][which(h.cm[[i]]==10)]
+  #K30[i]<-K[[i]][which(h.cm[[i]]==30)]
+  #K100[i]<-K[[i]][which(h.cm[[i]]==100)]
 }
 
 
@@ -96,13 +100,55 @@ source(paste(path,"\\vscale.R",sep=""))
 scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$ths,df.par$thr)
 
 
-plot(log10(unlist(h.cm)),unlist(theta.v),
-                xlab="pressure potential (pF)",
-                ylab="VWC")
+# Create animated figure of scaling process 
+
+h.cm.plot<-h.cm # REMEMBER to "reset" the plot every time by re-applying these starting points
+th.plot<-theta.v
+hsc.plot<-list()
+thsc.plot<-list()
+
+
+tiff("scaled%02d.tiff")
+for (i in 1:130) {
+  h.cm.plot<-h.cm.plot[-1]
+  th.plot<-th.plot[-1]
+  hsc.plot[[i]]<-scaled$h.sc[[i]]
+  thsc.plot[[i]]<-scaled$theta.sc[[i]]
+  if (i!=130){
+  par(mar=c(5,5,2,2))
+  plot(log10(unlist(h.cm.plot)),unlist(th.plot), xlim=c(0,6.5),ylim=c(0,0.5), cex=1.3,
+       xlab=expression(log10(h)), ylab=expression(theta), cex.axis=1.5, cex.lab=1.7)
+  points(log10(unlist(hsc.plot)),unlist(thsc.plot), col="red")
+  text(6,0.45, paste("i =", i, sep=" "), cex=1.5, col="red")
+  } else {
+    par(mar=c(5,5,2,2))
+    plot(log10(unlist(hsc.plot)),unlist(thsc.plot), xlim=c(0,6.5),ylim=c(0,0.5),col="red",
+         xlab=(expression(h/alpha[h])), ylab=(expression(theta/alpha[theta])), cex.axis=1.5, cex.lab=1.4)
+    text(6,0.45, paste("i =", i, sep=" "), cex=1.5, col="red")
+  }
+  
+}
+
+
+dev.off()
+
+# Create a .gif movie of the scaling procedure
+
+library(magick)
+frames<- paste0("scaled",sprintf('%02d',1:130),".tiff") # create a call to all images
+
+m <- image_read(frames)
+m <- image_animate(m, fps=5, loop=1)
+image_write(m, "VSCALE.gif")
+
+
+
+# Create static figures for the manuscript
+
 
 plot(log10(unlist(scaled[[2]])),unlist(scaled[[3]]),
               xlab="scaled pressure potential (pF)",
-              ylab="scaled VWC")
+              ylab="scaled VWC", col="red")
 
 
 plot(log10(unlist(h.cm)),log10(unlist(K)),
