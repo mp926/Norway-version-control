@@ -138,7 +138,7 @@ library(magick)
 frames<- paste0("scaled",sprintf('%02d',1:130),".tiff") # create a call to all images
 
 m <- image_read(frames)
-m <- image_animate(m, fps=5, loop=1)
+m <- image_animate(m, fps=10, loop=1)
 image_write(m, "VSCALE.gif")
 
 
