@@ -187,8 +187,75 @@ require(ggpubr)
 ggqqplot(log10(scaled$scaling.factors$a.h))
 ggqqplot(scaled$scaling.factors$a.theta)
 
-# For fitting conductivity curve 
-#scaled.hKfit<-unlist(h.scplot)
-#scaled.Kfit<-unlist(K.scplot)
+
+
+## Create 2D plot showing how scaling factors are implmeneted in HYDRUS -------------------------------
+top<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFTH.mat")
+top.coords<-data.frame(top$top[,1:2]) # Z is not needed since it is only the top layer 
+top.coords$SFTH<-top$top[,4]
+
+names(top.coords)<-c("x","y")
+
+library(plotly)
+
+p <- plot_ly(
+  type="contour",
+  x = top.coords$x,
+  y = top.coords$y, 
+  z = top.SFTH, 
+  zauto=FALSE,
+  zmin=0.913,
+  zmax=1.079,
+  colorscale = list(c(0,0.0909,0.1818,0.2727,0.3636,0.4545,0.5454,0.6363,0.7272,0.8181,0.9090,1),
+                    c("rgb(0,0,230)", "rgb(125,125,255)","rgb(62,183,255)","rgb(0,244,244)",
+                      "rgb(0,228,136)","rgb(0,252,0)","rgb(252,252,0)","rgb(208,208,0)",
+                      "rgb(252,132,0)","rgb(252,0,0)","rgb(188,0,0)","rgb(188,0,0)")),
+  autocontour = F,
+  contours = list(
+    start = 0.913,
+    end = 1.079,
+    size = 0.015
+  )
+)
+
+p
+
+
+# reference curve parameters and model line
+ref.curve<-c(7.52E-8,0.3866,8.1052E-4,1.3723) #thr ths alpha n
+# Determine the number of random samples that will be drawn from the resulting output (to conserve memory)
+r.samp<-sample(1:dim(top.coords)[1],100,replace=FALSE)
+h=seq(from=0, to=10000, length.out=length(r.samp)) # create h to be the same length as the drawn samples (for plotting consistency)
+
+th.h=(1/(1+(ref.curve[3]*h)^ref.curve[4])^(1-1/ref.curve[4])) *((ref.curve[2]-ref.curve[1])+ref.curve[1])
+
+
+h.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
+th.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
+for (i in 1:dim(top.coords)[1]){
+  h.sc[i,]<-h*top.SFTH[i]
+  th.sc[i,]<-th.h*top.SFTH[i]
+}
+
+
+
+plotdf<-data.frame("SF"=rep(top.coords$SFTH[r.samp],times=length(r.samp)),"order"=rep(top.coords$order[r.samp],times=length(r.samp)),"x"=c(log10(h.sc[r.samp,])),"y"=c(th.sc[r.samp,]))
+
+require(ggplot2)
+require(scales)
+
+b<-c(0.913,0.928,0.943,0.958,0.973,0.988,1.003,1.019,1.034,1.049,1.064,1.079)
+colors<-c(rgb(0,0,230,max=255), rgb(125,125,255,max=255),rgb(62,183,255,max=255),rgb(0,244,244,max=255),
+          rgb(0,228,136,max=255),rgb(0,252,0,max=255),rgb(252,252,0,max=255),rgb(208,208,0,max=255),
+          rgb(252,132,0,max=255),rgb(252,0,0,max=255),rgb(188,0,0,max=255),rgb(188,0,0,max=255))
+
+g<-ggplot() +
+    geom_point(data=plotdf,aes(x = x, y = y, color = SF))+
+    xlim(1.5,4) +
+    xlab(expression(log10(h)*alpha[h])) +
+    ylab(expression(theta*alpha[theta])) +
+    scale_color_gradientn(colors=colors, breaks=b)+
+    geom_line(aes(x=log10(h),y=th.h),lwd=1.3) +
+    theme_bw() + theme(axis.title=element_text(size=14))
 
 
