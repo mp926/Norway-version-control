@@ -123,7 +123,7 @@ for (i in 1:130) {
   } else {
     par(mar=c(5,5,2,2))
     plot(log10(unlist(hsc.plot)),unlist(thsc.plot), xlim=c(0,6.5),ylim=c(0,0.5),col="red",
-         xlab=(expression(h/alpha[h])), ylab=(expression(theta/alpha[theta])), cex.axis=1.5, cex.lab=1.4)
+         xlab=(expression(log10(h/alpha[h]))), ylab=(expression(theta/alpha[theta])), cex.axis=1.5, cex.lab=1.4)
     text(6,0.45, paste("i =", i, sep=" "), cex=1.5, col="red")
   }
   
