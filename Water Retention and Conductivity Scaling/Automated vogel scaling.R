@@ -254,7 +254,7 @@ g<-ggplot() +
     xlim(1.5,4) +
     xlab(expression(log10(h)*alpha[h])) +
     ylab(expression(theta*alpha[theta])) +
-    scale_color_gradientn(colors=colors, breaks=b)+
+    scale_color_gradientn(colors=colors, breaks=b, limits=c(0.913,1.079))+
     geom_line(aes(x=log10(h),y=th.h),lwd=1.3) +
     theme_bw() + theme(axis.title=element_text(size=14), axis.text = element_text(size=13))
 
