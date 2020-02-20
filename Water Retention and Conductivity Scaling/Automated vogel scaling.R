@@ -256,6 +256,6 @@ g<-ggplot() +
     ylab(expression(theta*alpha[theta])) +
     scale_color_gradientn(colors=colors, breaks=b)+
     geom_line(aes(x=log10(h),y=th.h),lwd=1.3) +
-    theme_bw() + theme(axis.title=element_text(size=14))
+    theme_bw() + theme(axis.title=element_text(size=14), axis.text = element_text(size=13))
 
 
