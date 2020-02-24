@@ -42,20 +42,32 @@ write.table(theta.v.lab,"theta lab only.txt")
 
 
 
-mydata.par<-readMat(paste(path,"\\VG parmeters SKU lab and field corrected pF PPE WP4C.mat", sep=""))
+mydata.par<-readMat(paste(path,"\\VG parmeters SKU lab and field corrected pF PPE WP4C with bimodal.mat", sep=""))
 
-par<-list()
-
+vGpar<-list()
+vGBpar<-list()
 
 for (i in 1:(length(mydata$SKUWRC)/length(mydata$SKUWRC[,,1]))){
   
- par[[i]]<-mydata.par$WRCPara[,,i]$vGx
+ vGpar[[i]]<-mydata.par$WRCPara[,,i]$vGx
+ vGBpar[[i]]<-mydata.par$WRCPara[,,i]$vGBx
   
 }
 
-df.par<-data.frame(t(data.frame(par)))
+
+df.par<-data.frame(t(data.frame(vGpar)),t(data.frame(vGBpar)))
 row.names(df.par)<-c(sapply(data,"[[",1))
-colnames(df.par)<-c("thr","ths","alpha","n")
+colnames(df.par)<-c("thrvG","thsvG","alpha","n","thrvGB","thsvGB","alpha1","n1","w2","alpha2","n2")
+
+
+# Compare the distributions of th_r and th_s between the unimodal and bimodal fits
+par(mfrow=c(2,2))
+hist(df.par$thrvG)
+hist(df.par$thsvG)
+hist(df.par$thrvGB)
+hist(df.par$thsvGB) # ths tends to be higher because the bimodal fitting can capture some of the very high porosities
+
+
 
 
 require(readxl)
@@ -82,8 +94,8 @@ K<-list()
 #K30<-1
 #K100<-1
 
-for (i in 1:length(df.par$thr)){
-  K[[i]]<-Conductivity(df.par[i,],h.cm[[i]])
+for (i in 1:length(df.par$thrvG)){
+  K[[i]]<-Conductivity(df.par[i,1:4],h.cm[[i]])
   #K10[i]<-K[[i]][which(h.cm[[i]]==10)]
   #K30[i]<-K[[i]][which(h.cm[[i]]==30)]
   #K100[i]<-K[[i]][which(h.cm[[i]]==100)]
@@ -97,7 +109,7 @@ path<-("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling")
 source(paste(path,"\\vscale.R",sep=""))
 
 
-scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$ths,df.par$thr)
+scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$thsvG,df.par$thrvG)
 
 
 # Create animated figure of scaling process 
@@ -146,9 +158,29 @@ image_write(m, "VSCALE.gif")
 # Create static figures for the manuscript
 
 
-plot(log10(unlist(scaled[[2]])),unlist(scaled[[3]]),
+
+# Compare scaled plots of Unimodal vs. Bimodal fits
+
+par(mfrow=c(2,2))
+hist(VGU$scaling.factors$a.theta, main="vG 1980 SFTH")
+hist(VGB$scaling.factors$a.theta, main="Durner 1994 SFTH")
+hist(VGU$scaling.factors$a.h, main="vG 1980 SFH")
+hist(VGB$scaling.factors$a.h, main="Durner 1994 SFH")
+
+
+par(mfrow=c(1,2))
+
+plot(log10(unlist(VGU[[2]])),unlist(VGU[[3]]),
               xlab="scaled pressure potential (pF)",
-              ylab="scaled VWC", col="red")
+              ylab="scaled VWC", col="black",
+              main="vG1980")
+
+plot(log10(unlist(VGB[[2]])), unlist(VGB[[3]]),
+                  xlab="scaled pressure potential (pF)",
+                  ylab="scaled VWC", col="black",
+                  main="Durner 1994")
+
+
 
 
 plot(log10(unlist(h.cm)),log10(unlist(K)),
@@ -160,12 +192,12 @@ plot(log10(unlist(scaled[[2]])), log10(unlist(scaled[[4]])),
      ylab="scaled Hydraulic conductivity (log10 cm/d)")
 
 
-scaled.th.lab<-unlist(scaled[[3]][1:122])
-scaled.h.lab<-unlist(scaled[[2]][1:122])
+# scaled.th.lab<-unlist(scaled[[3]][1:122])
+# scaled.h.lab<-unlist(scaled[[2]][1:122])
 
-scaled.th<-unlist(scaled[[3]])
-scaled.h<-unlist(scaled[[2]])
-scaled.K<-unlist(scaled[[4]])
+scaled.th<-unlist(VGU[[3]])
+scaled.h<-unlist(VGU[[2]])
+scaled.K<-unlist(VGU[[4]])
 
 write.table(scaled.th, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled theta.txt", sep="\t")
 write.table(scaled.h, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled h.txt", sep="\t")
