@@ -46,18 +46,34 @@ mydata.par<-readMat(paste(path,"\\VG parmeters SKU lab and field corrected pF PP
 
 vGpar<-list()
 vGBpar<-list()
+model.rmse<-list()
 
 for (i in 1:(length(mydata$SKUWRC)/length(mydata$SKUWRC[,,1]))){
   
  vGpar[[i]]<-mydata.par$WRCPara[,,i]$vGx
  vGBpar[[i]]<-mydata.par$WRCPara[,,i]$vGBx
+ model.rmse[[i]]<-mydata.par$WRCPara[,,i]$RMSE[7:8]
   
 }
+
 
 
 df.par<-data.frame(t(data.frame(vGpar)),t(data.frame(vGBpar)))
 row.names(df.par)<-c(sapply(data,"[[",1))
 colnames(df.par)<-c("thrvG","thsvG","alpha","n","thrvGB","thsvGB","alpha1","n1","w2","alpha2","n2")
+
+# Create a data.frame with model fitting statistics, including AICc
+
+fit.stat<-data.frame("rmse.vgb"=unlist(model.rmse)[c(FALSE,TRUE)],"rmse.vgu"=unlist(model.rmse)[c(TRUE, FALSE)])
+fit.stat$n=c(20,19,20,21,21,19,21,21,21,21,21,20,21,20,20,20,20,20,20,20,21,21,21,19,21,20,20,21,21,20,21,21,21,20,
+             20,21,19,20,20,20,22,21,21,20,20,21,21,21,20,22,21,20,22,21,19,21,22,21,21,20,21,21,21,22,21,21,21,21,
+             21,22,22,19,20,20,21,19,20,21,20,20,20,20,20,20,22,21,21,21,21,22,21,21,20,21,21,21,21,21,21,21,22,21,
+             22,21,20,21,21,21,21,21,22,21,21,21,22,21,21,21,21,21,21,2444,3864,1211,2766,3082,2665,1740,3415,3366)
+fit.stat$sse.vgb=(fit.stat$rmse.vgb)^2*fit.stat$n
+fit.stat$sse.vgu=(fit.stat$rmse.vgu)^2*fit.stat$n
+fit.stat$AICc.vgb= fit.stat$n*log(fit.stat$sse.vgb/fit.stat$n) + 2*7 + (2*7*(7+1))/(n-7-1) #corrected Akaike criterion for small sample sizes, k = 7 for vgb
+fit.stat$AICc.vgu= fit.stat$n*log(fit.stat$sse.vgu/fit.stat$n) + 2*4 + (2*4*(4+1))/(n-4-1) # k = 4 for vgu
+
 
 
 # Compare the distributions of th_r and th_s between the unimodal and bimodal fits
@@ -109,8 +125,8 @@ path<-("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling")
 source(paste(path,"\\vscale.R",sep=""))
 
 
-scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$thsvG,df.par$thrvG)
-
+VGU<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$thsvG,df.par$thrvG)
+VGB<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$thsvGB,df.par$thrvGB)
 
 # Create animated figure of scaling process 
 
