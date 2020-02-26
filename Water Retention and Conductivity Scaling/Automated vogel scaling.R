@@ -71,18 +71,24 @@ fit.stat$n=c(20,19,20,21,21,19,21,21,21,21,21,20,21,20,20,20,20,20,20,20,21,21,2
              22,21,20,21,21,21,21,21,22,21,21,21,22,21,21,21,21,21,21,2444,3864,1211,2766,3082,2665,1740,3415,3366)
 fit.stat$sse.vgb=(fit.stat$rmse.vgb)^2*fit.stat$n
 fit.stat$sse.vgu=(fit.stat$rmse.vgu)^2*fit.stat$n
-fit.stat$AICc.vgb= fit.stat$n*log(fit.stat$sse.vgb/fit.stat$n) + 2*7 + (2*7*(7+1))/(n-7-1) #corrected Akaike criterion for small sample sizes, k = 7 for vgb
-fit.stat$AICc.vgu= fit.stat$n*log(fit.stat$sse.vgu/fit.stat$n) + 2*4 + (2*4*(4+1))/(n-4-1) # k = 4 for vgu
 
+#Calculate AICc for each model fit 
 
+for (i in 1:130){
+if(fit.stat$n[i]/7 <= 40){
+fit.stat$AICc.vgb[i]= fit.stat$n[i]*log(fit.stat$sse.vgb[i]/fit.stat$n[i]) + 2*7 + (2*7*(7+1))/(n-7-1) #corrected Akaike criterion for small sample sizes, k = 7 for vgb
+} else {
+  fit.stat$AICc.vgb[i]= fit.stat$n[i]*log(fit.stat$sse.vgb[i]/fit.stat$n[i]) + 2*7
+  }
+if(fit.stat$n[i]/4 <= 40){
+  fit.stat$AICc.vgu[i]= fit.stat$n[i]*log(fit.stat$sse.vgu[i]/fit.stat$n[i]) + 2*4 + (2*4*(4+1))/(n-4-1) # k = 4 for vgu
+} else {
+  fit.stat$AICc.vgu[i]= fit.stat$n[i]*log(fit.stat$sse.vgu[i]/fit.stat$n[i]) + 2*4
+  }
+}
+ 
 
-# Compare the distributions of th_r and th_s between the unimodal and bimodal fits
-par(mfrow=c(2,2))
-hist(df.par$thrvG)
-hist(df.par$thsvG)
-hist(df.par$thrvGB)
-hist(df.par$thsvGB) # ths tends to be higher because the bimodal fitting can capture some of the very high porosities
-
+# idx<-which(fit.stat$AICc.vgb>fit.stat$AICc.vgu) # identify which WRCs are better fit by vG1980 based on AICc
 
 
 
@@ -125,8 +131,8 @@ path<-("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling")
 source(paste(path,"\\vscale.R",sep=""))
 
 
-VGU<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$thsvG,df.par$thrvG)
-VGB<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,df.par$thsvGB,df.par$thrvGB)
+scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,c(df.par$thsvGB),c(df.par$thrvGB))
+
 
 # Create animated figure of scaling process 
 
@@ -177,25 +183,24 @@ image_write(m, "VSCALE.gif")
 
 # Compare scaled plots of Unimodal vs. Bimodal fits
 
-par(mfrow=c(2,2))
-hist(VGU$scaling.factors$a.theta, main="vG 1980 SFTH")
-hist(VGB$scaling.factors$a.theta, main="Durner 1994 SFTH")
-hist(VGU$scaling.factors$a.h, main="vG 1980 SFH")
-hist(VGB$scaling.factors$a.h, main="Durner 1994 SFH")
+# par(mfrow=c(2,2))
+# hist(scaled$scaling.factors$a.theta[idx], main="vG 1980 SFTH")
+# hist(scaled$scaling.factors$a.theta[-idx], main="Durner 1994 SFTH")
+# hist(scaled$scaling.factors$a.h[idx], main="vG 1980 SFH")
+# hist(scaled$scaling.factors$a.h[-idx], main="Durner 1994 SFH")
 
 
-par(mfrow=c(1,2))
+par(mfrow=c(2,1))
+plot(log10(unlist(h.cm)),unlist(theta.v),
+     xlab="pressure potential (pF)",
+     ylab="VWC", col="black",
+     main="Unscaled data")
 
-plot(log10(unlist(VGU[[2]])),unlist(VGU[[3]]),
+
+plot(log10(unlist(scaled[[2]])),unlist(scaled[[3]]),
               xlab="scaled pressure potential (pF)",
               ylab="scaled VWC", col="black",
-              main="vG1980")
-
-plot(log10(unlist(VGB[[2]])), unlist(VGB[[3]]),
-                  xlab="scaled pressure potential (pF)",
-                  ylab="scaled VWC", col="black",
-                  main="Durner 1994")
-
+              main="VGB scaled")
 
 
 
@@ -211,18 +216,18 @@ plot(log10(unlist(scaled[[2]])), log10(unlist(scaled[[4]])),
 # scaled.th.lab<-unlist(scaled[[3]][1:122])
 # scaled.h.lab<-unlist(scaled[[2]][1:122])
 
-scaled.th<-unlist(VGU[[3]])
-scaled.h<-unlist(VGU[[2]])
-scaled.K<-unlist(VGU[[4]])
+scaled.th<-unlist(scaled[[3]])
+scaled.h<-unlist(scaled[[2]])
+scaled.K<-unlist(scaled[[4]])
 
-write.table(scaled.th, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled theta.txt", sep="\t")
-write.table(scaled.h, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled h.txt", sep="\t")
-write.table(scaled.K, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled K.txt", sep="\t")
-write.table(scaled.th.lab,"C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled theta lab.txt", sep="\t")
-write.table(scaled.h.lab,"C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled h lab.txt", sep="\t")
+write.table(scaled.th, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled theta bimodal.txt", sep="\t")
+write.table(scaled.h, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled h bimodal.txt", sep="\t")
+write.table(scaled.K, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled K bimodal.txt", sep="\t")
+#write.table(scaled.th.lab,"C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled theta lab.txt", sep="\t")
+#write.table(scaled.h.lab,"C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled h lab.txt", sep="\t")
 #write.table(scaled.hKfit, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaled hKfit.txt", sep="\t")
 
-write.table(scaled$scaling.factors, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaling factors.txt", sep="\t")
+write.table(scaled$scaling.factors, "C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\scaling factors bimodal.txt", sep="\t")
 
 
 
@@ -233,16 +238,16 @@ shapiro.test(scaled$scaling.factors$a.theta)
 require(ggpubr)
 
 ggqqplot(log10(scaled$scaling.factors$a.h))
-ggqqplot(scaled$scaling.factors$a.theta)
+ggqqplot(scaled$scaling.factors$a.theta) # Data is NOT normally distributed
 
 
 
-## Create 2D plot showing how scaling factors are implmeneted in HYDRUS -------------------------------
+## Create 2D plot showing how scaling factors are implemeneted in HYDRUS -------------------------------
 top<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFTH.mat")
 top.coords<-data.frame(top$top[,1:2]) # Z is not needed since it is only the top layer 
 top.coords$SFTH<-top$top[,4]
 
-names(top.coords)<-c("x","y")
+names(top.coords)<-c("x","y","SFTH")
 
 library(plotly)
 
@@ -250,7 +255,7 @@ p <- plot_ly(
   type="contour",
   x = top.coords$x,
   y = top.coords$y, 
-  z = top.SFTH, 
+  z = top.coords$SFTH, 
   zauto=FALSE,
   zmin=0.913,
   zmax=1.079,
@@ -270,19 +275,19 @@ p
 
 
 # reference curve parameters and model line
-ref.curve<-c(7.52E-8,0.3866,8.1052E-4,1.3723) #thr ths alpha n
+ref.curve<-c(0.0016,0.4034,0.0309,2.5058,0.9319,5.5595e-4,1.4701) #thr ths alpha1 n1 w2 alpha2 n2
 # Determine the number of random samples that will be drawn from the resulting output (to conserve memory)
 r.samp<-sample(1:dim(top.coords)[1],200,replace=FALSE)
 h=seq(from=0, to=10000, length.out=length(r.samp)) # create h to be the same length as the drawn samples (for plotting consistency)
 
-th.h=(1/(1+(ref.curve[3]*h)^ref.curve[4])^(1-1/ref.curve[4])) *((ref.curve[2]-ref.curve[1])+ref.curve[1])
-
+th.h=(((1-ref.curve[5])*(1./(1+(ref.curve[3]*h)^ref.curve[4]))^(1-1/ref.curve[4]))+
+        (ref.curve[5]*(1./(1+(ref.curve[6]*h)^ref.curve[7]))^(1-1/ref.curve[7])))*((ref.curve[2]-ref.curve[1])+ref.curve[1])
 
 h.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 th.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 for (i in 1:dim(top.coords)[1]){
-  h.sc[i,]<-h*top.SFTH[i]
-  th.sc[i,]<-th.h*top.SFTH[i]
+  h.sc[i,]<-h*top.coords$SFTH[i]
+  th.sc[i,]<-th.h*top.coords$SFTH[i]
 }
 
 
