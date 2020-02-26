@@ -292,7 +292,7 @@ for (i in 1:dim(top.coords)[1]){
 
 
 
-plotdf<-data.frame("SF"=rep(top.coords$SFTH[r.samp],times=length(r.samp)),"order"=rep(top.coords$order[r.samp],times=length(r.samp)),"x"=c(log10(h.sc[r.samp,])),"y"=c(th.sc[r.samp,]))
+plotdf<-data.frame("SF"=rep(top.coords$SFTH[r.samp],times=length(r.samp)),"x"=c(log10(h.sc[r.samp,])),"y"=c(th.sc[r.samp,]))
 
 require(ggplot2)
 require(scales)
