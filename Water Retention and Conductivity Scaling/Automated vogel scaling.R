@@ -21,22 +21,22 @@ for (i in 1:(length(mydata$SKUWRC)/length(mydata$SKUWRC[,,1]))){
 
 # Extract only lab data to check water retention curves -------------------
 
-h.cm.lab<-list()
-theta.v.lab<-list()
-  for (i in 1:121){
-  h.cm.lab[[i]]<-h.cm[[i]]
-  theta.v.lab[[i]]<-theta.v[[i]]
-}
-
-# Write lab water retentions to file (if needed)
-
-setwd(path)
-
-h.cm.lab<-unlist(h.cm.lab)
-theta.v.lab<-unlist(theta.v.lab)
-
-write.table(h.cm.lab,"h lab only.txt")
-write.table(theta.v.lab,"theta lab only.txt")
+# h.cm.lab<-list()
+# theta.v.lab<-list()
+#   for (i in 1:121){
+#   h.cm.lab[[i]]<-h.cm[[i]]
+#   theta.v.lab[[i]]<-theta.v[[i]]
+# }
+# 
+# # Write lab water retentions to file (if needed)
+# 
+# setwd(path)
+# 
+# h.cm.lab<-unlist(h.cm.lab)
+# theta.v.lab<-unlist(theta.v.lab)
+# 
+# write.table(h.cm.lab,"h lab only.txt")
+# write.table(theta.v.lab,"theta lab only.txt")
 
 # Extract all data to data frame -------------------
 
@@ -262,14 +262,16 @@ write.table(scaled$scaling.factors, "C:\\Users\\Matt\\Documents\\Norway\\Water r
 
 
 
-#check for normality
-shapiro.test(log10(scaled$scaling.factors$a.h))
-shapiro.test(scaled$scaling.factors$a.theta)
+#check for normality in the 2016 scailing factors 
+hist(log10(scaled$scaling.factors$a.h[80:130]))
+hist(scaled$scaling.factors$a.theta[80:130])
+shapiro.test(log10(scaled$scaling.factors$a.h[80:130]))
+shapiro.test(scaled$scaling.factors$a.theta[80:130])
 
 require(ggpubr)
 
-ggqqplot(log10(scaled$scaling.factors$a.h))
-ggqqplot(scaled$scaling.factors$a.theta) # Data is NOT normally distributed
+ggqqplot(log10(scaled$scaling.factors$a.h[80:130]), conf.int=TRUE, conf.int.level=0.95)
+ggqqplot(scaled$scaling.factors$a.theta[80:130], conf.int=TRUE, conf.int.level=0.95) 
 
 
 
