@@ -214,14 +214,14 @@ plot(log10(unlist(scaled[[2]])),unlist(scaled[[3]]),
               main="Scaled data")
 
 plot(log10(unlist(btransh)),log10(unlist(h.cm)),
-  xlab="pressure potential (pF)",
-  ylab="VWC", col="black",
+  xlab="pressure potential * scaling factor",
+  ylab="pressure potential unscaled", col="black",
   main="Back-transformed h")
   abline(lm.h, col="red")
   
   plot(unlist(btransth),unlist(theta.v),
-       xlab="pressure potential (pF)",
-       ylab="VWC", col="black", 
+       xlab="VWC scaled * scaling factor + theta_r",
+       ylab="VWC unscaled", col="black", 
        main="Back-transformed theta")
   abline(lm.th, col="red")
 
