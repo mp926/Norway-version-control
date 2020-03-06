@@ -116,8 +116,8 @@ K<-list()
 #K30<-1
 #K100<-1
 
-for (i in 1:length(df.par$thrvG)){
-  K[[i]]<-Conductivity(df.par[i,1:4],h.cm[[i]])
+for (i in 1:length(df.par$thrvGB)){
+  K[[i]]<-Conductivity(df.par[i,c(3,4,12,13)],h.cm[[i]])
   #K10[i]<-K[[i]][which(h.cm[[i]]==10)]
   #K30[i]<-K[[i]][which(h.cm[[i]]==30)]
   #K100[i]<-K[[i]][which(h.cm[[i]]==100)]
@@ -134,7 +134,7 @@ source(paste(path,"\\vscale.R",sep=""))
 scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,c(df.par$thsvGB),c(df.par$thrvGB))
 
 
-# Create animated figure of scaling process 
+# Create animated figure of scaling process ---------------------------------------------- 
 
 h.cm.plot<-h.cm # REMEMBER to "reset" the plot every time by re-applying these starting points
 th.plot<-theta.v
@@ -166,7 +166,7 @@ for (i in 1:130) {
 
 dev.off()
 
-# Create a .gif movie of the scaling procedure
+# create the .gif image
 
 library(magick)
 frames<- paste0("scaled",sprintf('%02d',1:130),".tiff") # create a call to all images
@@ -226,13 +226,9 @@ plot(log10(unlist(btransh)),log10(unlist(h.cm)),
   abline(lm.th, col="red")
 
 
-h=seq(from=0, to=10000, length.out=1000)
-ref.curve<-c(0.0016,0.4034,0.0309,2.5058,0.9319,5.5595e-4,1.4701) #thr ths alpha1 n1 w2 alpha2 n2
-th.h=(((1-ref.curve[5])*(1./(1+(ref.curve[3]*h)^ref.curve[4]))^(1-1/ref.curve[4]))+
-        (ref.curve[5]*(1./(1+(ref.curve[6]*h)^ref.curve[7]))^(1-1/ref.curve[7])))*((ref.curve[2]-ref.curve[1])+ref.curve[1])
 
 
-
+# plot the unscaled and scaled hydraulic conductivity 
 
 
 plot(log10(unlist(h.cm)),log10(unlist(K)),
