@@ -189,8 +189,19 @@ image_write(m, "VSCALE.gif")
 # hist(scaled$scaling.factors$a.h[idx], main="vG 1980 SFH")
 # hist(scaled$scaling.factors$a.h[-idx], main="Durner 1994 SFH")
 
+par(mfrow=c(2,2)) # plot the unscaled, scaled, back-transformed correlation
 
-par(mfrow=c(2,1))
+btransh<-list() # back transform the data 
+btransth<-list()
+for (i in 1:130){
+  btransh[[i]]<-scaled$h.sc[[i]]*scaled$scaling.factors$a.h[i]
+  btransth[[i]]<-(scaled$theta.sc[[i]]*scaled$scaling.factors$a.theta[i])+df.par$thrvGB[i]
+}
+
+lm.h<-lm(log10(unlist(btransh)+1)~log10(unlist(h.cm)+1)) 
+lm.th<-lm(unlist(btransth)~unlist(theta.v))
+
+
 plot(log10(unlist(h.cm)),unlist(theta.v),
      xlab="pressure potential (pF)",
      ylab="VWC", col="black",
@@ -200,7 +211,27 @@ plot(log10(unlist(h.cm)),unlist(theta.v),
 plot(log10(unlist(scaled[[2]])),unlist(scaled[[3]]),
               xlab="scaled pressure potential (pF)",
               ylab="scaled VWC", col="black",
-              main="VGB scaled")
+              main="Scaled data")
+
+plot(log10(unlist(btransh)),log10(unlist(h.cm)),
+  xlab="pressure potential (pF)",
+  ylab="VWC", col="black",
+  main="Back-transformed h")
+  abline(lm.h, col="red")
+  
+  plot(unlist(btransth),unlist(theta.v),
+       xlab="pressure potential (pF)",
+       ylab="VWC", col="black", 
+       main="Back-transformed theta")
+  abline(lm.th, col="red")
+
+
+h=seq(from=0, to=10000, length.out=1000)
+ref.curve<-c(0.0016,0.4034,0.0309,2.5058,0.9319,5.5595e-4,1.4701) #thr ths alpha1 n1 w2 alpha2 n2
+th.h=(((1-ref.curve[5])*(1./(1+(ref.curve[3]*h)^ref.curve[4]))^(1-1/ref.curve[4]))+
+        (ref.curve[5]*(1./(1+(ref.curve[6]*h)^ref.curve[7]))^(1-1/ref.curve[7])))*((ref.curve[2]-ref.curve[1])+ref.curve[1])
+
+
 
 
 
@@ -243,15 +274,17 @@ ggqqplot(scaled$scaling.factors$a.theta) # Data is NOT normally distributed
 
 
 ## Create 2D plot showing how scaling factors are implemeneted in HYDRUS -------------------------------
-top<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFTH.mat")
-top.coords<-data.frame(top$top[,1:2]) # Z is not needed since it is only the top layer 
-top.coords$SFTH<-top$top[,4]
+top.th<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFTH.mat")
+top.h<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFH.mat")
+top.coords<-data.frame(top.th$top[,1:2]) # Z is not needed since it is only the top layer 
+top.coords$SFTH<-top.th$top[,4]
+top.coords$SFH<-top.h$top.h[,4]
 
-names(top.coords)<-c("x","y","SFTH")
+names(top.coords)<-c("x","y","SFTH","SFH")
 
-library(plotly)
+require(plotly)
 
-p <- plot_ly(
+p1 <- plot_ly(
   type="contour",
   x = top.coords$x,
   y = top.coords$y, 
@@ -271,7 +304,36 @@ p <- plot_ly(
   )
 )
 
-p
+
+p2 <- plot_ly(
+  type="contour",
+  x = top.coords$x,
+  y = top.coords$y, 
+  z = top.coords$SFH, 
+  showscale=FALSE,
+  zauto=TRUE,
+  zmin=0.8459,
+  zmax=1.0825,
+  colorscale = list(c(0,0.0909,0.1818,0.2727,0.3636,0.4545,0.5454,0.6363,0.7272,0.8181,0.9090,1),
+                    c("rgb(0,0,230)", "rgb(125,125,255)","rgb(62,183,255)","rgb(0,244,244)",
+                      "rgb(0,228,136)","rgb(0,252,0)","rgb(252,252,0)","rgb(208,208,0)",
+                      "rgb(252,132,0)","rgb(252,0,0)","rgb(188,0,0)","rgb(188,0,0)")),
+  autocontour = F,
+  contours = list(
+    start = 0.913,
+    end = 1.079,
+    size = 0.015
+  )
+)
+
+
+
+fig<-subplot(p1,p2)
+fig %>% layout(annotations = list(
+  list(x=0.2, y=1.05,text="SFTH", showarrow=F, xref='paper', yref='paper'),
+  list(x=0.78, y=1.05, text="SFH", showarrow=F, xref='paper', yref='paper')
+))
+
 
 
 # reference curve parameters and model line
@@ -286,29 +348,30 @@ th.h=(((1-ref.curve[5])*(1./(1+(ref.curve[3]*h)^ref.curve[4]))^(1-1/ref.curve[4]
 h.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 th.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 for (i in 1:dim(top.coords)[1]){
-  h.sc[i,]<-h*top.coords$SFTH[i]
-  th.sc[i,]<-th.h*top.coords$SFTH[i]
+  h.sc[i,]<-h*top.coords$SFH[i]
+  th.sc[i,]<-(th.h*top.coords$SFTH[i])+0.0016 # This cannot perfectly re-create the variability due to the need of theta_r
 }
 
 
 
-plotdf<-data.frame("SF"=rep(top.coords$SFTH[r.samp],times=length(r.samp)),"x"=c(log10(h.sc[r.samp,])),"y"=c(th.sc[r.samp,]))
+plotdf<-data.frame("SFTH"=rep(top.coords$SFTH[r.samp],times=length(r.samp)),"SFH"=rep(top.coords$SFH[r.samp],times=length(r.samp)),"x"=c(log10(h.sc[r.samp,])),"y"=c(th.sc[r.samp,]),
+                   "idx"=rep(seq(1,length(r.samp)),times=length(r.samp)))
 
 require(ggplot2)
 require(scales)
 
-b<-c(0.913,0.928,0.943,0.958,0.973,0.988,1.003,1.019,1.034,1.049,1.064,1.079)
+b<-seq(from=0.8459, to=1.0825, length.out=10)
 colors<-c(rgb(0,0,230,max=255), rgb(125,125,255,max=255),rgb(62,183,255,max=255),rgb(0,244,244,max=255),
           rgb(0,228,136,max=255),rgb(0,252,0,max=255),rgb(252,252,0,max=255),rgb(208,208,0,max=255),
           rgb(252,132,0,max=255),rgb(252,0,0,max=255),rgb(188,0,0,max=255),rgb(188,0,0,max=255))
 
 g<-ggplot() +
-    geom_point(data=plotdf,aes(x = x, y = y, color = SF))+
+    geom_point(data=plotdf,aes(x = x, y = y, color = idx))+
     xlim(1.5,4) +
     xlab(expression(log10(h^"*"*alpha[h]))) +
     ylab(expression(theta^"*"*alpha[theta])) +
-    scale_color_gradientn(colors=colors, breaks=b, limits=c(0.913,1.079))+
+    #scale_color_gradientn(colors=colors, breaks=b, limits=c(0.8459,1.0825), name="SF")+
     geom_line(aes(x=log10(h),y=th.h),lwd=1.3) +
     theme_bw() + theme(axis.title=element_text(size=14), axis.text = element_text(size=13))
-
+g
 
