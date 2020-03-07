@@ -354,7 +354,7 @@ h.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 th.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 for (i in 1:dim(top.coords)[1]){
   h.sc[i,]<-(10^h)*top.coords$SFH[i]
-  th.sc[i,]<-0.0016 + ((th.h-0.0016)*top.coords$SFTH[i]) 
+  th.sc[i,]<-ref.curve[1] + ((th.h-ref.curve[1])*top.coords$SFTH[i]) 
   th.sc[i,]<-th.sc[i,] + thr.rand[i]  # random theta_r value for each 
   # This is how HYDRUS implements the scaling factor for theta (technical manual p. 50)
 }
