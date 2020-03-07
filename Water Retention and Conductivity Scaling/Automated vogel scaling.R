@@ -338,16 +338,25 @@ fig %>% layout(annotations = list(
 ref.curve<-c(0.0016,0.4034,0.0309,2.5058,0.9319,5.5595e-4,1.4701) #thr ths alpha1 n1 w2 alpha2 n2
 # Determine the number of random samples that will be drawn from the resulting output (to conserve memory)
 r.samp<-sample(1:dim(top.coords)[1],200,replace=FALSE)
-h=seq(from=0, to=10000, length.out=length(r.samp)) # create h to be the same length as the drawn samples (for plotting consistency)
+h=seq(from=0, to=6, length.out=length(r.samp)) # create h to be the same length as the drawn samples (for plotting consistency)
 
-th.h=(((1-ref.curve[5])*(1./(1+(ref.curve[3]*h)^ref.curve[4]))^(1-1/ref.curve[4]))+
-        (ref.curve[5]*(1./(1+(ref.curve[6]*h)^ref.curve[7]))^(1-1/ref.curve[7])))*((ref.curve[2]-ref.curve[1])+ref.curve[1])
+# create a truncated normal distribution based on bounds of theta.r values
+require(truncnorm)
+
+thr.dist<-rtruncnorm(length(r.samp), a=-max(df.par$thrvGB), b=max(df.par$thrvGB), 
+                     mean = mean(df.par$thrvGB), sd=sd(df.par$thrvGB))
+thr.rand<-sample(thr.dist,length(r.samp),replace=TRUE)
+
+th.h=(((1-ref.curve[5])*(1./(1+(ref.curve[3]*10^h)^ref.curve[4]))^(1-1/ref.curve[4]))+
+        (ref.curve[5]*(1./(1+(ref.curve[6]*10^h)^ref.curve[7]))^(1-1/ref.curve[7])))*((ref.curve[2]-ref.curve[1])+ref.curve[1])
 
 h.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 th.sc<-matrix(nrow=dim(top.coords)[1],ncol=length(r.samp))
 for (i in 1:dim(top.coords)[1]){
-  h.sc[i,]<-h*top.coords$SFH[i]
-  th.sc[i,]<-(th.h*top.coords$SFTH[i])+0.0016 # This cannot perfectly re-create the variability due to the need of theta_r
+  h.sc[i,]<-(10^h)*top.coords$SFH[i]
+  th.sc[i,]<-0.0016 + ((th.h-0.0016)*top.coords$SFTH[i]) 
+  th.sc[i,]<-th.sc[i,] + thr.rand[i]  # random theta_r value for each 
+  # This is how HYDRUS implements the scaling factor for theta (technical manual p. 50)
 }
 
 
@@ -365,11 +374,11 @@ colors<-c(rgb(0,0,230,max=255), rgb(125,125,255,max=255),rgb(62,183,255,max=255)
 
 g<-ggplot() +
     geom_point(data=plotdf,aes(x = x, y = y, color = idx))+
-    xlim(1.5,4) +
+    xlim(0,6) +
     xlab(expression(log10(h^"*"*alpha[h]))) +
     ylab(expression(theta^"*"*alpha[theta])) +
     #scale_color_gradientn(colors=colors, breaks=b, limits=c(0.8459,1.0825), name="SF")+
-    geom_line(aes(x=log10(h),y=th.h),lwd=1.3) +
+    geom_line(aes(x=h,y=th.h),lwd=1.3) +
     theme_bw() + theme(axis.title=element_text(size=14), axis.text = element_text(size=13))
 g
 
