@@ -210,9 +210,12 @@ names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 err<-c(1.02,1.05,1.1,1.2)
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
-
+vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
 origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200) # create a line of the variogram model for plotting
 origmodel.lines.th$type=rep("None",times=200)
+
+ns=vth.orig.fit$psill[1]/vth.orig.fit$psill[2]
+
 
 gam.err=matrix(nrow=length(err),ncol=length(vth.orig$gamma))
 for (i in 1:4){
@@ -227,14 +230,18 @@ vth.err[[i]]<-vth.orig
 vth.err[[i]]$gamma=gam.err[i,]
 }
 
-vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
 
 vth.err.fit<-list()
 error.lines.th<-list()
+ns.err<-matrix(ncol=4)
 for (i in 1:4){
 vth.err.fit[[i]]<-fit.variogram(vth.err[[i]], vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE) #fit each variogram
 error.lines.th[[i]]<-variogramLine(vth.err.fit[[i]],maxdist=60,n=200)
+ns.err[i]<-vth.err.fit[[i]]$psill[1]/vth.err.fit[[i]]$psill[2]
 }
+
+
+
 
 
 error.lines.th<-as.data.frame(error.lines.th)
@@ -316,6 +323,42 @@ require(ggpubr)
 ggarrange(g1 + theme(legend.position="top"),g2 + theme(legend.position=), labels=c("A","B"), ncol=2, nrow=1)
 
 
+
+
+# PERFORM GLOBAL ORDINARY KRIGING ON THE DATASETS ---------------------------
+
+# Extract the data to be kriged and change the y dimension 
+df.sku2016<-df[84:130,]
+df.sku2016$y<-df.sku2016$y-200
+coordinates(df.sku2016)= ~x+y+z
+
+# Create an empty Krig grid
+
+range.yz <- seq(from = 0, to = 100, length.out = 50) # Define the grid dimensions and cell size
+range.x <-seq(from = 0, to = 200, length.out = 100)
+grid3D <- expand.grid(x = range.x, y = range.yz, z = range.yz) # create the grid 
+gridded(grid3D) = ~x+y+z
+
+res3D<-list()
+for (i in 1:5){
+  if(i==1){
+res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0) 
+  } else {
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.err.fit[[i-1]],nsim=0)
+  }
+}
+
+
+est3D<-as.data.frame(res3D)
+
+require(lattice)
+
+levelplot(var1.pred ~ x + y | z, as.data.frame(res3D))
+
+require(plot3D)
+
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=225, bty="f", 
+         pch=1)
 
 
 
