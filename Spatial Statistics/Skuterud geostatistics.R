@@ -342,9 +342,9 @@ gridded(grid3D) = ~x+y+z
 res3D<-list()
 for (i in 1:5){
   if(i==1){
-res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0) 
+res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
-    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.err.fit[[i-1]],nsim=0)
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.err.fit[[i-1]],nsim=0, maxdist=Inf,nmin=0)
   }
 }
 
@@ -357,7 +357,7 @@ levelplot(var1.pred ~ x + y | z, as.data.frame(res3D))
 
 require(plot3D)
 
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=225, bty="f", 
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=215, bty="f", 
          pch=1)
 
 
