@@ -207,14 +207,15 @@ names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 
 # --------------------------------- water content ---
 
-err<-c(1.02,1.05,1.1,1.2)
+#err<-c(1.02,1.05,1.1,1.2)
+err<-c(2,4,6,8) # Try more extreme values to see what happens 
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
 vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
 origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200) # create a line of the variogram model for plotting
 origmodel.lines.th$type=rep("None",times=200)
 
-ns=vth.orig.fit$psill[1]/vth.orig.fit$psill[2]
+ns=vth.orig.fit$psill[1]/(vth.orig.fit$psill[2]+vth.orig.fit$psill[1])
 
 
 gam.err=matrix(nrow=length(err),ncol=length(vth.orig$gamma))
@@ -232,16 +233,15 @@ vth.err[[i]]$gamma=gam.err[i,]
 
 
 vth.err.fit<-list()
+#vth.err.mod<-list()
 error.lines.th<-list()
 ns.err<-matrix(ncol=4)
 for (i in 1:4){
-vth.err.fit[[i]]<-fit.variogram(vth.err[[i]], vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE) #fit each variogram
-error.lines.th[[i]]<-variogramLine(vth.err.fit[[i]],maxdist=60,n=200)
-ns.err[i]<-vth.err.fit[[i]]$psill[1]/vth.err.fit[[i]]$psill[2]
+  vth.err.fit[[i]]<-fit.variogram(vth.err[[i]], vgm(psill=max(vth.err[[i]]$gamma),"Exp",range=45, nugget=max(vth.err[[i]]$gamma)*ns), fit.ranges=FALSE)
+  #vth.err.mod[[i]]<-vgm(psill=vth.err.fit[[i]]$psill[2]-nug,"Exp",range=45,nugget=vth.err.fit[[i]]$psill[1])
+  error.lines.th[[i]]<-variogramLine(vth.err.fit[[i]],maxdist=60,n=200)
+  ns.err[i]<-vth.err.mod[[i]]$psill[1]/(vth.err.mod[[i]]$psill[2]+vth.err.mod[[i]]$psill[1])
 }
-
-
-
 
 
 error.lines.th<-as.data.frame(error.lines.th)
@@ -249,12 +249,12 @@ require(data.table)
 m<-melt(error.lines.th) # melt the variogram line data
 vgmline.data<-subset(m, grepl("gamma", variable)) # subset the gamma values
 vgmline.data$dist=rep(error.lines.th$dist, times=4) # add the repeated distance values
-vgmline.data$type=rep(c("2%","5%","10%","20%"),each=200)
-
+vgmline.data$type=rep(c("200%","400%","600%","800%"),each=200)
 
 
 vario.data<-data.frame(dist=rep(vth.orig$dist,times=5), gamma=c(vth.orig$gamma,t(gam.err)), 
-                       type=rep(c("orig","2%","5%","10%","20%"),each=5))
+                       type=rep(c("orig","200%","400%","600%","800%"),each=5))
+
 
 g1<-ggplot(data=vario.data, aes(x=dist,y=gamma, color=type)) +
   geom_point(shape=20, size=3) +
@@ -262,7 +262,7 @@ g1<-ggplot(data=vario.data, aes(x=dist,y=gamma, color=type)) +
   geom_line(data=vgmline.data, aes(x=dist, y=value, color=type)) +
   xlab('Lag distance (cm)') +
   ylab(expression(gamma)) +
-  scale_color_discrete(name="Added error",breaks=c("orig","2%","5%","10%","20%"), labels=c("None","2%","5%","10%","20%")) +
+  scale_color_discrete(name="Added error",breaks=c("orig","200%","400%","600%","800%"), labels=c("None","200%","400%","600%","800%")) +
   theme_bw() + theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
 
 g1
@@ -272,6 +272,8 @@ g1
 vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
 vh.orig.fit<-fit.variogram(vh.orig,vgm(psill=0.12,"Sph",range=20, nugget=0.08))
 origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
+ns=vh.orig.fit$psill[1]/(vh.orig.fit$psill[2]+vh.orig.fit$psill[1])
+
 
 gam.err=matrix(nrow=length(err),ncol=length(vth.orig$gamma))
 
@@ -286,10 +288,15 @@ for (i in 1:4){
 }
 
 vh.err.fit<-list()
+vh.err.mod<-list()
 error.lines.h<-list()
+ns.err<-matrix(ncol=4)
 for (i in 1:4){
-  vh.err.fit[[i]]<-fit.variogram(vh.err[[i]], vgm(psill=0.12,"Sph",range=20, nugget=0.08)) 
-  error.lines.h[[i]]<-variogramLine(vh.err.fit[[i]],maxdist=60,n=200)
+  vh.err.fit[[i]]<-fit.variogram(vh.err[[i]], vgm(psill=max(vh.err[[i]]$gamma),"Sph",range=20))
+  nug=max(vh.err.fit[[i]]$psill)*ns
+  vh.err.mod[[i]]<-vgm(psill=vh.err.fit[[i]]$psill-nug,"Sph",range=20,nugget=nug)
+  error.lines.h[[i]]<-variogramLine(vh.err.mod[[i]],maxdist=60,n=200)
+  ns.err[i]<-vh.err.mod[[i]]$psill[1]/(vh.err.mod[[i]]$psill[2]+vh.err.mod[[i]]$psill[1])
 }
 
 
@@ -357,7 +364,7 @@ levelplot(var1.pred ~ x + y | z, as.data.frame(res3D))
 
 require(plot3D)
 
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=215, bty="f", 
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.var.4,ticktype="detailed", theta=0, phi=215, bty="f", 
          pch=1)
 
 
