@@ -21,7 +21,7 @@ df$Ks<-Ks$`Ksat (cm/d)`
 names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 
 
-# ## BOOTSTRAP THE VARIOGRAMS for SFTheta SFh and Ks  ---------------------------------------------------
+# Bootstrap the variograms for SFTheta SFh and Ks by removing a random spatial data point  ---------------------------------------------------
 # 
 # #Set up the bootstrapping
 # 
@@ -203,7 +203,51 @@ names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 
 
 
-# Add random error (2,5,10,20%) to the variograms (Use this if bootstrapping is not used) ---------------------
+
+# Add random error to the variograms by bootstrapping the gamma values only (n:S ratio not maintained) -----
+n=1000 #Draw 50 random variogram models after 1000 runs 
+coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
+vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
+origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200) # create a line of the variogram model for plotting
+origmodel.lines.th$type=rep("None",times=200)
+
+gam.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
+rand.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
+vth<-list()
+vth.fitE<-list()
+SSEth.Exp<-data.frame()
+vmodel.linesth<-list()
+for (i in 1:n){
+  rand.err[i,]<-sample(seq(from=0.8,to=1.2,by=0.1),length(vth.orig$gamma),replace=TRUE)
+  gam.err[i,]<-vth.orig$gamma*rand.err[i,] # Add error to the gamma for 1000 runs
+  vth[[i]]<-vth.orig
+  vth[[i]]$gamma=gam.err[i,]# Substitute the gammas with error into the original variogram
+  vth.fitE[[i]]<-fit.variogram(vth[[i]], vgm(psill=max(vth[[i]]$gamma-min(vth[[i]]$gamma)), "Exp",
+                                             nugget=vth[[i]]$gamma[1])) #fit each variogram
+  SSEth.Exp[i,1]<-attr(vth.fitE[[i]],"SSErr")
+  vmodel.linesth[[i]]<-variogramLine(vth.fitE[[i]],maxdist=60,n=200) # simulate model line output for plotting
+}
+
+require(ggplot2) # Plot the resulting variograms
+
+dfdat<-matrix(nrow=n*5,ncol=2)
+for(i in 1:n){
+  dfdat[,1]<-rep(t(vth[[1]]$dist), times=n)
+  dfdat[seq(1,5000,5)[i]:seq(5,5000,5)[i],2]<-t(vth[[i]]$gamma)
+}
+
+dfdat<-as.data.frame(dfdat)
+names(dfdat)<-c("dist","gamma")
+dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
+
+
+
+g<-ggplot(dfdat[1:25,],aes(x=dist,y=gamma, lty=samp)) +
+  geom_line(lwd=1.3)
+
+
+# Add random error to the variograms with increased nugget (maintain n:s ratio) ---------------------
 
 # --------------------------------- water content ---
 
@@ -332,6 +376,7 @@ ggarrange(g1 + theme(legend.position="top"),g2 + theme(legend.position=), labels
 
 
 
+
 # PERFORM GLOBAL ORDINARY KRIGING ON THE DATASETS ---------------------------
 
 # Extract the data to be kriged and change the y dimension 
@@ -360,7 +405,7 @@ est3D<-as.data.frame(res3D)
 
 require(lattice)
 
-levelplot(var1.pred ~ x + y | z, as.data.frame(res3D))
+levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D))
 
 require(plot3D)
 
