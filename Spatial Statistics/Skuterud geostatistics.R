@@ -219,32 +219,38 @@ vth.fitE<-list()
 SSEth.Exp<-data.frame()
 vmodel.linesth<-list()
 for (i in 1:n){
-  rand.err[i,]<-sample(seq(from=0.8,to=1.2,by=0.1),length(vth.orig$gamma),replace=TRUE)
+  rand.err[i,]<-sample(seq(from=0.8,to=1.2,by=0.025),length(vth.orig$gamma),replace=TRUE)
   gam.err[i,]<-vth.orig$gamma*rand.err[i,] # Add error to the gamma for 1000 runs
   vth[[i]]<-vth.orig
   vth[[i]]$gamma=gam.err[i,]# Substitute the gammas with error into the original variogram
   vth.fitE[[i]]<-fit.variogram(vth[[i]], vgm(psill=max(vth[[i]]$gamma-min(vth[[i]]$gamma)), "Exp",
-                                             nugget=vth[[i]]$gamma[1])) #fit each variogram
+                                             nugget=min(vth[[i]]$gamma), range=vth[[i]]$dist[which.max(vth[[i]]$gamma)])) #fit each variogram
   SSEth.Exp[i,1]<-attr(vth.fitE[[i]],"SSErr")
-  vmodel.linesth[[i]]<-variogramLine(vth.fitE[[i]],maxdist=60,n=200) # simulate model line output for plotting
+  vmodel.linesth[[i]]<-variogramLine(vth.fitE[[i]],maxdist=60,n=50) # simulate model line output for plotting
 }
 
 require(ggplot2) # Plot the resulting variograms
 
 dfdat<-matrix(nrow=n*5,ncol=2)
+dfmod<-matrix(nrow=n*50,ncol=2)
 for(i in 1:n){
   dfdat[,1]<-rep(t(vth[[1]]$dist), times=n)
   dfdat[seq(1,5000,5)[i]:seq(5,5000,5)[i],2]<-t(vth[[i]]$gamma)
+  dfmod[,1]<-rep(t(vmodel.linesth[[1]]$dist), times=n)
+  dfmod[seq(1,50000,50)[i]:seq(50,50000,50)[i],2]<-t(vmodel.linesth[[i]]$gamma)
 }
 
 dfdat<-as.data.frame(dfdat)
 names(dfdat)<-c("dist","gamma")
+dfmod<-as.data.frame(dfmod)
+names(dfmod)<-c("dist","gamma")
 dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
+dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
 
 
-
-g<-ggplot(dfdat[1:25,],aes(x=dist,y=gamma, lty=samp)) +
-  geom_line(lwd=1.3)
+g<-ggplot(dfdat[1:50,],aes(x=dist,y=gamma, color=samp)) +
+  geom_point() +
+  geom_line(data=dfmod[1:500,],aes(x=dist,y=gamma, color=samp))
 
 
 # Add random error to the variograms with increased nugget (maintain n:s ratio) ---------------------
