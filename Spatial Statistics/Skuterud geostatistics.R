@@ -205,29 +205,37 @@ names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 
 
 # Add random error to the variograms by bootstrapping the gamma values only (n:S ratio not maintained) -----
-n=1000 #Draw 50 random variogram models after 1000 runs 
+
+
+# SFTHETA --
+
+n=1000 # 1000 runs 
+rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
 vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
 origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200) # create a line of the variogram model for plotting
 origmodel.lines.th$type=rep("None",times=200)
 
-gam.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
-rand.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
+gam.err=matrix(nrow=n,ncol=length(vth.orig$gamma)-1)
+rand.err=matrix(nrow=n,ncol=length(vth.orig$gamma)-1)
 vth<-list()
 vth.fitE<-list()
 SSEth.Exp<-data.frame()
 vmodel.linesth<-list()
+nug<-matrix(nrow=n)
 for (i in 1:n){
-  rand.err[i,]<-sample(seq(from=0.8,to=1.2,by=0.025),length(vth.orig$gamma),replace=TRUE)
-  gam.err[i,]<-vth.orig$gamma*rand.err[i,] # Add error to the gamma for 1000 runs
+  rand.err[i,]<-sample(seq(from=0.9,to=1.1,by=0.025),length(vth.orig$gamma)-1,replace=TRUE)
+  gam.err[i,]<-vth.orig$gamma[1:4]*rand.err[i,] # Add error to the gamma for 1000 variograms
   vth[[i]]<-vth.orig
-  vth[[i]]$gamma=gam.err[i,]# Substitute the gammas with error into the original variogram
-  vth.fitE[[i]]<-fit.variogram(vth[[i]], vgm(psill=max(vth[[i]]$gamma-min(vth[[i]]$gamma)), "Exp",
-                                             nugget=min(vth[[i]]$gamma), range=vth[[i]]$dist[which.max(vth[[i]]$gamma)])) #fit each variogram
+  vth[[i]]$gamma[1:4]=gam.err[i,]# Substitute the gammas with error into the original variogram
+  nug[i]=vth[[i]]$gamma[which.min(vth[[i]]$gamma)]
+  vth.fitE[[i]]<-fit.variogram(vth[[i]], vgm(psill=vth[[i]]$gamma[5]-nug[i], "Exp",
+                                             nugget=nug[i], range=vth[[i]]$dist[which.max(vth[[i]]$gamma)])) #fit each variogram
   SSEth.Exp[i,1]<-attr(vth.fitE[[i]],"SSErr")
   vmodel.linesth[[i]]<-variogramLine(vth.fitE[[i]],maxdist=60,n=50) # simulate model line output for plotting
 }
+
 
 require(ggplot2) # Plot the resulting variograms
 
@@ -247,10 +255,101 @@ names(dfmod)<-c("dist","gamma")
 dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
 dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
 
+rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
 
-g<-ggplot(dfdat[1:50,],aes(x=dist,y=gamma, color=samp)) +
+datalist = list()
+modlist = list()
+for (i in 1:length(rand.id)) {
+  datalist[[i]] <- subset(dfdat, samp==paste("sample", rand.id[i], sep=" "))
+  modlist[[i]] <- subset(dfmod, samp==paste("sample", rand.id[i], sep=" "))
+}
+dfrand<-rbindlist(datalist)
+dfmodrand<-rbindlist(modlist) 
+
+g1<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
   geom_point() +
-  geom_line(data=dfmod[1:500,],aes(x=dist,y=gamma, color=samp))
+  geom_line(data=dfmodrand,aes(x=dist,y=gamma, color=samp)) +
+  xlab("Distance (cm)") +
+  ylab(expression(gamma)) +
+  ggtitle("Random gamma (sill constrained) SFth") +
+  theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
+                     legend.position="")
+
+g1
+
+# SFH --
+
+n=1000 # 1000 runs 
+vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vh.orig.fit<-fit.variogram(vh.orig,vgm(psill=0.12,"Sph",range=20, nugget=0.08))
+origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
+origmodel.lines.th$type=rep("None",times=200)
+
+gam.err=matrix(nrow=n,ncol=length(vh.orig$gamma)-1)
+rand.err=matrix(nrow=n,ncol=length(vh.orig$gamma)-1)
+vh<-list()
+vh.fit<-list()
+SSEh.Exp<-data.frame()
+vmodel.linesh<-list()
+nug<-matrix(nrow=n)
+for (i in 1:n){
+  rand.err[i,]<-sample(seq(from=0.9,to=1.1,by=0.025),length(vh.orig$gamma)-1,replace=TRUE)
+  gam.err[i,]<-vh.orig$gamma[1:4]*rand.err[i,] # Add error to the gamma for 1000 variograms
+  vh[[i]]<-vh.orig
+  vh[[i]]$gamma[1:4]=gam.err[i,]# Substitute the gammas with error into the original variogram
+  nug[i]=vh[[i]]$gamma[which.min(vh[[i]]$gamma)]
+  vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=vh[[i]]$gamma[5]-nug[i], "Sph",
+                                             nugget=nug[i], range=vh[[i]]$dist[which.max(vh[[i]]$gamma)])) #fit each variogram
+  SSEh.Exp[i,1]<-attr(vh.fit[[i]],"SSErr")
+  vmodel.linesh[[i]]<-variogramLine(vh.fit[[i]],maxdist=60,n=50) # simulate model line output for plotting
+}
+
+
+dfdat<-matrix(nrow=n*5,ncol=2)
+dfmod<-matrix(nrow=n*50,ncol=2)
+for(i in 1:n){
+  dfdat[,1]<-rep(t(vh[[1]]$dist), times=n)
+  dfdat[seq(1,5000,5)[i]:seq(5,5000,5)[i],2]<-t(vh[[i]]$gamma)
+  dfmod[,1]<-rep(t(vmodel.linesh[[1]]$dist), times=n)
+  dfmod[seq(1,50000,50)[i]:seq(50,50000,50)[i],2]<-t(vmodel.linesh[[i]]$gamma)
+}
+
+dfdat<-as.data.frame(dfdat)
+names(dfdat)<-c("dist","gamma")
+dfmod<-as.data.frame(dfmod)
+names(dfmod)<-c("dist","gamma")
+dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
+dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
+
+
+datalist = list()
+modlist = list()
+for (i in 1:length(rand.id)) {
+  datalist[[i]] <- subset(dfdat, samp==paste("sample", rand.id[i], sep=" "))
+  modlist[[i]] <- subset(dfmod, samp==paste("sample", rand.id[i], sep=" "))
+}
+dfrand<-rbindlist(datalist)
+dfmodrand<-rbindlist(modlist) 
+
+g2<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
+  geom_point() +
+  geom_line(data=dfmodrand,aes(x=dist,y=gamma, color=samp)) +
+  xlab("Distance (cm)") +
+  ylab(expression(gamma)) +
+  ggtitle("Random gamma (sill constrained) SFh") +
+  theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
+                     legend.position="")
+
+g2
+
+
+#combine plots
+
+require(ggpubr)
+
+ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=c("A","B"), ncol=2, nrow=1)
+
+
 
 
 # Add random error to the variograms with increased nugget (maintain n:s ratio) ---------------------
