@@ -238,6 +238,7 @@ for (i in 1:n){
 
 
 require(ggplot2) # Plot the resulting variograms
+require(data.table)
 
 dfdat<-matrix(nrow=n*5,ncol=2)
 dfmod<-matrix(nrow=n*50,ncol=2)
@@ -293,7 +294,7 @@ SSEh.Exp<-data.frame()
 vmodel.linesh<-list()
 nug<-matrix(nrow=n)
 for (i in 1:n){
-  rand.err[i,]<-sample(seq(from=0.9,to=1.1,by=0.025),length(vh.orig$gamma)-1,replace=TRUE)
+  rand.err[i,]<-sample(seq(from=0.9,to=1.1,by=0.025),length(vh.orig$gamma)-1,replace=TRUE) # change to uniform distribution
   gam.err[i,]<-vh.orig$gamma[1:4]*rand.err[i,] # Add error to the gamma for 1000 variograms
   vh[[i]]<-vh.orig
   vh[[i]]$gamma[1:4]=gam.err[i,]# Substitute the gammas with error into the original variogram
@@ -484,6 +485,21 @@ ggarrange(g1 + theme(legend.position="top"),g2 + theme(legend.position=), labels
 
 # PERFORM GLOBAL ORDINARY KRIGING ON THE DATASETS ---------------------------
 
+
+df<-data.frame(read.table(paste(path,"\\Skuterud scaling factors K outliers removed feb 8 2020.dat", sep=""), sep="", skip=8))
+
+require(readxl)
+Ks<-read_excel("C:\\Users\\Matt\\Documents\\Norway\\Ksat and K-6\\Compiled Ksat data - Attila Aug 2019.xlsx",
+               sheet="Compiled", col_names=TRUE)
+
+
+df$Ks<-Ks$`Ksat (cm/d)` 
+
+
+names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
+
+
+
 # Extract the data to be kriged and change the y dimension 
 df.sku2016<-df[84:130,]
 df.sku2016$y<-df.sku2016$y-200
@@ -497,11 +513,11 @@ grid3D <- expand.grid(x = range.x, y = range.yz, z = range.yz) # create the grid
 gridded(grid3D) = ~x+y+z
 
 res3D<-list()
-for (i in 1:5){
+for (i in 1:length(rand.id)){
   if(i==1){
-res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
+res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
-    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.err.fit[[i-1]],nsim=0, maxdist=Inf,nmin=0)
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
   }
 }
 
@@ -510,16 +526,36 @@ est3D<-as.data.frame(res3D)
 
 require(lattice)
 
-levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D))
-
+l1<-levelplot(var1.pred ~ x + y | z, as.data.frame(res3D))
+l2<-levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D))
+l3<-levelplot(var1.pred.2 ~ x.2 + y.2 | z.2, as.data.frame(res3D))
+l4<-levelplot(var1.pred.3 ~ x.3 + y.3 | z.3, as.data.frame(res3D))
+l5<-levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D))
+  
 require(plot3D)
+require(cowplot)
 
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.var.4,ticktype="detailed", theta=0, phi=215, bty="f", 
+p1<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=215, bty="f", 
          pch=1)
+p2<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.1,ticktype="detailed", theta=0, phi=215, bty="f", 
+             pch=1)
+p3<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.2,ticktype="detailed", theta=0, phi=215, bty="f", 
+             pch=1)
+p4<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.3,ticktype="detailed", theta=0, phi=215, bty="f", 
+             pch=1)
+p5<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.4,ticktype="detailed", theta=0, phi=215, bty="f", 
+             pch=1)
 
+layout(matrix(c(1,2,3,4),2))
 
-
-
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=215, bty="f", 
+         pch=1)
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.1,ticktype="detailed", theta=0, phi=215, bty="f", 
+         pch=1)
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.2,ticktype="detailed", theta=0, phi=215, bty="f", 
+         pch=1)
+points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.3,ticktype="detailed", theta=0, phi=215, bty="f", 
+             pch=1)
 
 # Clay content
 clay<-data.frame(read.table(paste(path,"\\clay content points.dat", sep=""), sep="", skip=6))
