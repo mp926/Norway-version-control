@@ -251,7 +251,6 @@ for (i in 1:n){
 barplot(table(mod.opt))
 
 
-
 require(ggplot2) # Plot the resulting variograms
 require(data.table)
 
@@ -271,7 +270,12 @@ names(dfmod)<-c("dist","gamma")
 dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
 dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
 
+
 rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
+
+# Look at the variogram representation for the 50 random realizations
+barplot(table(mod.opt[rand.id,1]))
+
 
 datalist = list()
 modlist = list()
