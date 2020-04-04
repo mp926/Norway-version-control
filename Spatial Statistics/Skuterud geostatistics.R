@@ -210,38 +210,53 @@ names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 # SFTHETA --
 
 n=1000 # 1000 runs 
-rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
 vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
 origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200) # create a line of the variogram model for plotting
 origmodel.lines.th$type=rep("None",times=200)
 
-gam.err=matrix(nrow=n,ncol=length(vth.orig$gamma)-1)
-rand.err=matrix(nrow=n,ncol=length(vth.orig$gamma)-1)
+gam.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
+rand.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
 vth<-list()
-vth.fitE<-list()
-SSEth.Exp<-data.frame()
+vth.fit<-list()
+SSEth.mod<-data.frame()
 vmodel.linesth<-list()
+mod.id<-c("Sph","Exp","Lin")
+mod.opt<-data.frame()
 nug<-matrix(nrow=n)
 for (i in 1:n){
-  rand.err[i,]<-sample(seq(from=0.9,to=1.1,by=0.025),length(vth.orig$gamma)-1,replace=TRUE)
-  gam.err[i,]<-vth.orig$gamma[1:4]*rand.err[i,] # Add error to the gamma for 1000 variograms
+  rand.err[i,]<-sample(runif(1000,min=0.95,max=1.05),length(vth.orig$gamma),replace=TRUE) # Do bootstrap sampling for error from a uniform distribution 
+  gam.err[i,]<-vth.orig$gamma*rand.err[i,] # Add error to the gamma for 1000 variograms
   vth[[i]]<-vth.orig
-  vth[[i]]$gamma[1:4]=gam.err[i,]# Substitute the gammas with error into the original variogram
+  vth[[i]]$gamma=gam.err[i,]# Substitute the gammas with error into the original variogram
   nug[i]=vth[[i]]$gamma[which.min(vth[[i]]$gamma)]
-  vth.fitE[[i]]<-fit.variogram(vth[[i]], vgm(psill=vth[[i]]$gamma[5]-nug[i], "Exp",
-                                             nugget=nug[i], range=vth[[i]]$dist[which.max(vth[[i]]$gamma)])) #fit each variogram
-  SSEth.Exp[i,1]<-attr(vth.fitE[[i]],"SSErr")
-  vmodel.linesth[[i]]<-variogramLine(vth.fitE[[i]],maxdist=60,n=50) # simulate model line output for plotting
+  
+  for (j in 1:length(mod.id)){
+  mod<-fit.variogram(vth[[i]], vgm(psill=vth[[i]]$gamma[5]-nug[i], paste(mod.id[j]),
+                                   nugget=nug[i], range=vth[[i]]$dist[which.max(vth[[i]]$gamma)])) #fit each variogram with 3 models
+  SSEth.mod[i,j]<-attr(mod,"SSErr")
+  }
+  names(SSEth.mod)<-mod.id
+  
+  vth.fit[[i]]<-fit.variogram(vth[[i]], vgm(psill=vth[[i]]$gamma[5]-nug[i], model=names(which.min(SSEth.mod[i,])),
+                                             nugget=nug[i], range=vth[[i]]$dist[which.max(vth[[i]]$gamma)])) #fit each variogram with the best model fit
+  
+  vmodel.linesth[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=50) # simulate model line output for plotting  
+
+  mod.opt[i,1]<-as.character(vth.fit[[i]]$model[2]) # optimal model type for each realization based on SSE 
 }
+
+# Figure out how many realizations use each model type
+barplot(table(mod.opt))
+
 
 
 require(ggplot2) # Plot the resulting variograms
 require(data.table)
 
 dfdat<-matrix(nrow=n*5,ncol=2)
-dfmod<-matrix(nrow=n*50,ncol=2)
+dfmod<-matrix(nrow=n*50,ncol=3)
 for(i in 1:n){
   dfdat[,1]<-rep(t(vth[[1]]$dist), times=n)
   dfdat[seq(1,5000,5)[i]:seq(5,5000,5)[i],2]<-t(vth[[i]]$gamma)
