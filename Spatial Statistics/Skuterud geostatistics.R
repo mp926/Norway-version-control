@@ -475,23 +475,25 @@ origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
 ns=vh.orig.fit$psill[1]/(vh.orig.fit$psill[2]+vh.orig.fit$psill[1])
 
 
-gam.err=matrix(nrow=length(err),ncol=length(vth.orig$gamma))
-
-for (i in 1:4){
-  gam.err[i,]<-vh.orig$gamma*err[i]
+gam.err=matrix(nrow=length(rand.err),ncol=length(vh.orig$gamma))
+for (i in 1:n){
+  gam.err[i,]<-vh.orig$gamma*rand.err[i]
 }
 
+
+# Change the variograms to accomodate the new error values 
 vh.err<-list()
-for (i in 1:4){
+for (i in 1:n){
   vh.err[[i]]<-vh.orig
   vh.err[[i]]$gamma=gam.err[i,]
 }
 
+
 vh.err.fit<-list()
 vh.err.mod<-list()
 error.lines.h<-list()
-ns.err<-matrix(ncol=4)
-for (i in 1:4){
+ns.err<-matrix(ncol=n)
+for (i in 1:n){
   vh.err.fit[[i]]<-fit.variogram(vh.err[[i]], vgm(psill=max(vh.err[[i]]$gamma),"Sph",range=20))
   nug=max(vh.err.fit[[i]]$psill)*ns
   vh.err.mod[[i]]<-vgm(psill=vh.err.fit[[i]]$psill-nug,"Sph",range=20,nugget=nug)
@@ -503,31 +505,42 @@ for (i in 1:4){
 error.lines.h<-as.data.frame(error.lines.h)
 m<-melt(error.lines.h) # melt the variogram line data
 vgmline.data<-subset(m, grepl("gamma", variable)) # subset the gamma values
-vgmline.data$dist=rep(error.lines.h$dist, times=4) # add the repeated distance values
-vgmline.data$type=rep(c("2%","5%","10%","20%"),each=200)
+vgmline.data$dist=rep(error.lines.h$dist, times=n) # add the repeated distance values
+vgmline.data$samp=rep(paste("sample", seq(1,n,1)),each=200)
+
+
+vario.data<-data.frame(dist=rep(vh.orig$dist,times=n+1), gamma=c(vh.orig$gamma,t(gam.err)),
+                       samp=c(rep("orig",times=5),rep(paste("sample", seq(1,n,1)),each=5)))
+
+
+datalist = list()
+modlist = list()
+for (i in 1:length(rand.id)) {
+  datalist[[i]] <- subset(vario.data, samp==paste("sample", rand.id[i], sep=" "))
+  modlist[[i]] <- subset(vgmline.data, samp==paste("sample", rand.id[i], sep=" "))
+}
+dfrand<-rbindlist(datalist)
+dfmodrand<-rbindlist(modlist)
 
 
 
-vario.data<-data.frame(dist=rep(vh.orig$dist,times=5), gamma=c(vh.orig$gamma,t(gam.err)), 
-                       type=rep(c("orig","2%","5%","10%","20%"),each=5))
-
-g2<-ggplot(data=vario.data, aes(x=dist,y=gamma, color=type)) +
-  geom_point(shape=20, size=3) +
-  geom_line(data=origmodel.lines.h, aes(x=dist, y=gamma), color="magenta") +
-  geom_line(data=vgmline.data, aes(x=dist, y=value, color=type)) +
-  xlab('Lag distance (cm)') +
+g2<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
+  geom_point() +
+  geom_line(data=dfmodrand,aes(x=dist,y=value, color=samp)) +
+  xlab("Distance (cm)") +
   ylab(expression(gamma)) +
-  scale_color_discrete(name="Added error",breaks=c("orig","2%","5%","10%","20%"), labels=c("None","2%","5%","10%","20%")) +
-  theme_bw() + theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
-
+  ggtitle("N:S maintained SFh") +
+  theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
+                     legend.position="")
 g2
+
+
 
 
 # plot both figures on the same page
 
-require(ggpubr)
 
-ggarrange(g1 + theme(legend.position="top"),g2 + theme(legend.position=), labels=c("A","B"), ncol=2, nrow=1)
+ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=c("A","B"), ncol=2, nrow=1)
 
 
 
