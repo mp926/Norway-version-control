@@ -4,6 +4,25 @@ library(ggplot2)
 library(dplyr)
 
 
+## LOAD IN ENVIRONMENT DATA (FOR CONSISTENCY AND NO FURTHER RANDOM SAMPLING) ----------------
+
+# NS maintained
+cwd<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control")
+path<-paste(cwd,"/Spatial Statistics", sep="")
+setwd(path)
+load(paste(path,"/SKUVarioNSmaintained.RData", sep=""))
+
+
+# NS not maintained
+
+load(paste(path,"/SKUVarioNSnotmaintained.RData", sep=""))
+
+
+
+## LOAD IN THE DATA IF ENVIRONMENT DATA IS NOT AVAILABLE (or if needed) --------------
+ 
+
+
 path<-("C:\\Users\\Matt\\Documents\\Norway\\SGeMS files")
 
 # Scaling factors
@@ -390,6 +409,13 @@ require(ggpubr)
 ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=c("A","B"), ncol=2, nrow=1)
 
 
+# save the global environment so that you have access to all randomized components
+
+cwd<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control")
+ path<-paste(cwd,"/Spatial Statistics", sep="")
+ setwd(path)
+ save.image(file="SKUVarioNSnotmaintained.RData")
+
 
 
 # Add random error to the variograms with increased nugget (maintain n:s ratio) ---------------------
@@ -543,6 +569,12 @@ g2
 ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=c("A","B"), ncol=2, nrow=1)
 
 
+# save the global environment so that you have access to all randomized components
+
+cwd<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control")
+path<-paste(cwd,"/Spatial Statistics", sep="")
+setwd(path)
+save.image(file="SKUVarioNSmaintained.RData")
 
 
 
