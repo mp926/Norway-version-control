@@ -223,7 +223,7 @@ vth.fit<-list()
 SSEth.mod<-data.frame()
 vmodel.linesth<-list()
 mod.id<-c("Sph","Exp","Lin")
-mod.opt<-data.frame()
+mod.opt.th<-data.frame()
 nug<-matrix(nrow=n)
 for (i in 1:n){
   rand.err[i,]<-sample(runif(1000,min=0.95,max=1.05),length(vth.orig$gamma),replace=TRUE) # Do bootstrap sampling for error from a uniform distribution 
@@ -244,11 +244,11 @@ for (i in 1:n){
   
   vmodel.linesth[[i]]<-variogramLine(vth.fit[[i]],maxdist=60,n=50) # simulate model line output for plotting  
 
-  mod.opt[i,1]<-as.character(vth.fit[[i]]$model[2]) # optimal model type for each realization based on SSE 
+  mod.opt.th[i,1]<-as.character(vth.fit[[i]]$model[2]) # optimal model type for each realization based on SSE 
 }
 
 # Figure out how many realizations use each model type
-barplot(table(mod.opt))
+barplot(table(mod.opt,th))
 
 
 require(ggplot2) # Plot the resulting variograms
@@ -274,7 +274,7 @@ dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
 rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
 
 # Look at the variogram representation for the 50 random realizations
-barplot(table(mod.opt[rand.id,1]))
+barplot(table(mod.opt.th[rand.id,1]))
 
 
 datalist = list()
@@ -291,7 +291,7 @@ g1<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
   geom_line(data=dfmodrand,aes(x=dist,y=gamma, color=samp)) +
   xlab("Distance (cm)") +
   ylab(expression(gamma)) +
-  ggtitle("Random gamma (sill constrained) SFth") +
+  ggtitle("Random gamma SFth") +
   theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
                      legend.position="")
 
@@ -305,28 +305,44 @@ vh.orig.fit<-fit.variogram(vh.orig,vgm(psill=0.12,"Sph",range=20, nugget=0.08))
 origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
 origmodel.lines.th$type=rep("None",times=200)
 
-gam.err=matrix(nrow=n,ncol=length(vh.orig$gamma)-1)
-rand.err=matrix(nrow=n,ncol=length(vh.orig$gamma)-1)
+gam.err=matrix(nrow=n,ncol=length(vh.orig$gamma))
 vh<-list()
 vh.fit<-list()
-SSEh.Exp<-data.frame()
+SSEh.mod<-data.frame()
 vmodel.linesh<-list()
+mod.id<-c("Sph","Exp","Lin")
+mod.opt.h<-data.frame()
 nug<-matrix(nrow=n)
 for (i in 1:n){
-  rand.err[i,]<-sample(seq(from=0.9,to=1.1,by=0.025),length(vh.orig$gamma)-1,replace=TRUE) # change to uniform distribution
-  gam.err[i,]<-vh.orig$gamma[1:4]*rand.err[i,] # Add error to the gamma for 1000 variograms
+  gam.err[i,]<-vh.orig$gamma*rand.err[i,] # Add error to the gamma for 1000 variograms. rand.err is defined earlier
   vh[[i]]<-vh.orig
-  vh[[i]]$gamma[1:4]=gam.err[i,]# Substitute the gammas with error into the original variogram
+  vh[[i]]$gamma=gam.err[i,]# Substitute the gammas with error into the original variogram
   nug[i]=vh[[i]]$gamma[which.min(vh[[i]]$gamma)]
-  vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=vh[[i]]$gamma[5]-nug[i], "Sph",
-                                             nugget=nug[i], range=vh[[i]]$dist[which.max(vh[[i]]$gamma)])) #fit each variogram
-  SSEh.Exp[i,1]<-attr(vh.fit[[i]],"SSErr")
-  vmodel.linesh[[i]]<-variogramLine(vh.fit[[i]],maxdist=60,n=50) # simulate model line output for plotting
+  
+  for (j in 1:length(mod.id)){
+    mod<-fit.variogram(vh[[i]], vgm(psill=vh[[i]]$gamma[5]-nug[i], paste(mod.id[j]),
+                                     nugget=nug[i], range=vh[[i]]$dist[which.max(vh[[i]]$gamma)])) #fit each variogram with 3 models
+    SSEh.mod[i,j]<-attr(mod,"SSErr")
+  }
+  names(SSEh.mod)<-mod.id
+  
+  vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=vh[[i]]$gamma[5]-nug[i], model=names(which.min(SSEh.mod[i,])),
+                                            nugget=nug[i], range=vh[[i]]$dist[which.max(vh[[i]]$gamma)])) #fit each variogram with the best model fit
+  
+  vmodel.linesh[[i]]<-variogramLine(vh.fit[[i]],maxdist=60,n=50) # simulate model line output for plotting  
+  
+  mod.opt.h[i,1]<-as.character(vh.fit[[i]]$model[2]) # optimal model type for each realization based on SSE 
 }
 
+# Figure out how many realizations use each model type
+barplot(table(mod.opt.h))
+
+
+require(ggplot2) # Plot the resulting variograms
+require(data.table)
 
 dfdat<-matrix(nrow=n*5,ncol=2)
-dfmod<-matrix(nrow=n*50,ncol=2)
+dfmod<-matrix(nrow=n*50,ncol=3)
 for(i in 1:n){
   dfdat[,1]<-rep(t(vh[[1]]$dist), times=n)
   dfdat[seq(1,5000,5)[i]:seq(5,5000,5)[i],2]<-t(vh[[i]]$gamma)
@@ -340,6 +356,10 @@ dfmod<-as.data.frame(dfmod)
 names(dfmod)<-c("dist","gamma")
 dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
 dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
+
+
+# Look at the variogram representation for the 50 random realizations
+barplot(table(mod.opt.h[rand.id,1]))
 
 
 datalist = list()
@@ -356,7 +376,7 @@ g2<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
   geom_line(data=dfmodrand,aes(x=dist,y=gamma, color=samp)) +
   xlab("Distance (cm)") +
   ylab(expression(gamma)) +
-  ggtitle("Random gamma (sill constrained) SFh") +
+  ggtitle("Random gamma SFh") +
   theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
                      legend.position="")
 
@@ -534,22 +554,34 @@ gridded(grid3D) = ~x+y+z
 res3D<-list()
 for (i in 1:length(rand.id)){
   if(i==1){
-res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
+res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
-    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
   }
 }
 
 
 est3D<-as.data.frame(res3D)
 
+
+# FOR N:S NOT MAINTAINED. This will plot the optimal model fit for a sample of the random realizations,
+#as well as what type of model it is.
+
 require(lattice)
 
-l1<-levelplot(var1.pred ~ x + y | z, as.data.frame(res3D))
-l2<-levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D))
-l3<-levelplot(var1.pred.2 ~ x.2 + y.2 | z.2, as.data.frame(res3D))
-l4<-levelplot(var1.pred.3 ~ x.3 + y.3 | z.3, as.data.frame(res3D))
-l5<-levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D))
+levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
+main=paste("Original data fitting", "mod=Exp", ""))
+
+levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][1], ""))
+levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][rand.id[1]], ""))
+levelplot(var1.pred.2 ~ x.2 + y.2 | z.2, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[2]), "mod=", mod.opt.th[,1][rand.id[2]], ""))
+levelplot(var1.pred.3 ~ x.3 + y.3 | z.3, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[3]), "mod=", mod.opt.th[,1][rand.id[3]], ""))
+levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[4]), "mod=", mod.opt.th[,1][rand.id[4]], ""))
   
 require(plot3D)
 require(cowplot)
