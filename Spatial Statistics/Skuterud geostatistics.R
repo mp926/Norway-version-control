@@ -396,8 +396,7 @@ ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=
 
 # --------------------------------- water content ---
 
-#err<-c(1.02,1.05,1.1,1.2)
-err<-c(2,4,6,8) # Try more extreme values to see what happens 
+rand.err<-sample(runif(1000,min=1,max=8),replace=TRUE) # Do bootstrap sampling for error from a uniform distribution
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
 vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
@@ -406,30 +405,32 @@ origmodel.lines.th$type=rep("None",times=200)
 
 ns=vth.orig.fit$psill[1]/(vth.orig.fit$psill[2]+vth.orig.fit$psill[1])
 
+n=1000
+rand.err<-sample(runif(1000,min=1,max=8),replace=TRUE) # Do bootstrap sampling for error from a uniform distribution
 
-gam.err=matrix(nrow=length(err),ncol=length(vth.orig$gamma))
-for (i in 1:4){
-gam.err[i,]<-vth.orig$gamma*err[i]
+gam.err=matrix(nrow=length(rand.err),ncol=length(vth.orig$gamma))
+for (i in 1:n){
+  gam.err[i,]<-vth.orig$gamma*rand.err[i]
 }
 
 
 # Change the variograms to accomodate the new error values 
 vth.err<-list()
-for (i in 1:4){
-vth.err[[i]]<-vth.orig
-vth.err[[i]]$gamma=gam.err[i,]
+for (i in 1:n){
+  vth.err[[i]]<-vth.orig
+  vth.err[[i]]$gamma=gam.err[i,]
 }
 
 
 vth.err.fit<-list()
 #vth.err.mod<-list()
 error.lines.th<-list()
-ns.err<-matrix(ncol=4)
-for (i in 1:4){
+ns.err<-matrix(ncol=n)
+for (i in 1:n){
   vth.err.fit[[i]]<-fit.variogram(vth.err[[i]], vgm(psill=max(vth.err[[i]]$gamma),"Exp",range=45, nugget=max(vth.err[[i]]$gamma)*ns), fit.ranges=FALSE)
   #vth.err.mod[[i]]<-vgm(psill=vth.err.fit[[i]]$psill[2]-nug,"Exp",range=45,nugget=vth.err.fit[[i]]$psill[1])
   error.lines.th[[i]]<-variogramLine(vth.err.fit[[i]],maxdist=60,n=200)
-  ns.err[i]<-vth.err.mod[[i]]$psill[1]/(vth.err.mod[[i]]$psill[2]+vth.err.mod[[i]]$psill[1])
+  ns.err[i]<-vth.err.fit[[i]]$psill[1]/(vth.err.fit[[i]]$psill[2]+vth.err.fit[[i]]$psill[1])
 }
 
 
@@ -437,23 +438,33 @@ error.lines.th<-as.data.frame(error.lines.th)
 require(data.table)
 m<-melt(error.lines.th) # melt the variogram line data
 vgmline.data<-subset(m, grepl("gamma", variable)) # subset the gamma values
-vgmline.data$dist=rep(error.lines.th$dist, times=4) # add the repeated distance values
-vgmline.data$type=rep(c("200%","400%","600%","800%"),each=200)
+vgmline.data$dist=rep(error.lines.th$dist, times=n) # add the repeated distance values
+vgmline.data$samp=rep(paste("sample", seq(1,n,1)),each=200)
 
 
-vario.data<-data.frame(dist=rep(vth.orig$dist,times=5), gamma=c(vth.orig$gamma,t(gam.err)), 
-                       type=rep(c("orig","200%","400%","600%","800%"),each=5))
+vario.data<-data.frame(dist=rep(vth.orig$dist,times=n+1), gamma=c(vth.orig$gamma,t(gam.err)),
+                       samp=c(rep("orig",times=5),rep(paste("sample", seq(1,n,1)),each=5)))
 
 
-g1<-ggplot(data=vario.data, aes(x=dist,y=gamma, color=type)) +
-  geom_point(shape=20, size=3) +
-  geom_line(data=origmodel.lines.th, aes(x=dist, y=gamma), color="magenta") +
-  geom_line(data=vgmline.data, aes(x=dist, y=value, color=type)) +
-  xlab('Lag distance (cm)') +
+datalist = list()
+modlist = list()
+for (i in 1:length(rand.id)) {
+  datalist[[i]] <- subset(vario.data, samp==paste("sample", rand.id[i], sep=" "))
+  modlist[[i]] <- subset(vgmline.data, samp==paste("sample", rand.id[i], sep=" "))
+}
+dfrand<-rbindlist(datalist)
+dfmodrand<-rbindlist(modlist)
+
+
+
+g1<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
+  geom_point() +
+  geom_line(data=dfmodrand,aes(x=dist,y=value, color=samp)) +
+  xlab("Distance (cm)") +
   ylab(expression(gamma)) +
-  scale_color_discrete(name="Added error",breaks=c("orig","200%","400%","600%","800%"), labels=c("None","200%","400%","600%","800%")) +
-  theme_bw() + theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
-
+  ggtitle("N:S maintained SFth") +
+  theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
+                     legend.position="")
 g1
 
 # -------------------------- pressure potential ---
