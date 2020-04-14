@@ -39,6 +39,14 @@ df$Ks<-Ks$`Ksat (cm/d)`
 
 names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 
+# if new random selection is needed
+rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
+
+# if you want to use the previously selected random index
+cwd<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control")
+path<-paste(cwd,"/Spatial Statistics", sep="")
+setwd(path)
+load(paste(path,"/random index selection.RData", sep=""))
 
 # Bootstrap the variograms for SFTheta SFh and Ks by removing a random spatial data point  ---------------------------------------------------
 # 
@@ -290,7 +298,6 @@ dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
 dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
 
 
-rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
 
 # Look at the variogram representation for the 50 random realizations
 barplot(table(mod.opt.th[rand.id,1]))
@@ -608,10 +615,54 @@ range.x <-seq(from = 0, to = 200, length.out = 100)
 grid3D <- expand.grid(x = range.x, y = range.yz, z = range.yz) # create the grid 
 gridded(grid3D) = ~x+y+z
 
+
+
+# FOR N:S MAINTAINED
+
+
 res3D<-list()
 for (i in 1:length(rand.id)){
   if(i==1){
 res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
+  } else {
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.err.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
+  }
+}
+
+
+est3D<-as.data.frame(res3D)
+
+
+require(lattice)
+
+
+levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
+          main=paste("Original data fitting", "mod=Exp", ""))
+
+levelplot(var1.pred.1 ~ x + y | z, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[1]), "error", 
+                     as.character(round(rand.err[rand.id[1]] *100)),"%",sep=" "))
+levelplot(var1.pred.2 ~ x + y | z, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[2]), "error", 
+                     as.character(round(rand.err[rand.id[2]] *100)),"%",sep=" "))
+levelplot(var1.pred.3 ~ x + y | z, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[3]), "error", 
+                     as.character(round(rand.err[rand.id[3]] *100)),"%",sep=" "))
+levelplot(var1.pred.4 ~ x + y | z, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[4]), "error", 
+                     as.character(round(rand.err[rand.id[4]] *100)),"%",sep=" "))
+levelplot(var1.pred.5 ~ x + y | z, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[5]), "error", 
+                     as.character(round(rand.err[rand.id[5]] *100)),"%",sep=" "))
+
+
+
+# FOR N:S NOT MAINTAINED. 
+
+res3D<-list()
+for (i in 1:length(rand.id)){
+  if(i==1){
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
     res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
   }
@@ -621,34 +672,7 @@ res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit
 est3D<-as.data.frame(res3D)
 
 
-
 require(lattice)
-
-# FOR N:S MAINTAINED
-
-levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
-          main=paste("Original data fitting", "mod=Exp", ""))
-
-levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[1]), "error", 
-                     as.character(round(rand.err[rand.id[1]] *100)),"%",sep=" "))
-levelplot(var1.pred.1 ~ x.2 + y.2 | z.2, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[2]), "error", 
-                     as.character(round(rand.err[rand.id[2]] *100)),"%",sep=" "))
-levelplot(var1.pred.2 ~ x.3 + y.3 | z.3, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[3]), "error", 
-                     as.character(round(rand.err[rand.id[3]] *100)),"%",sep=" "))
-levelplot(var1.pred.3 ~ x.4 + y.4 | z.4, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[4]), "error", 
-                     as.character(round(rand.err[rand.id[4]] *100)),"%",sep=" "))
-levelplot(var1.pred.4 ~ x.5 + y.5 | z.5, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[5]), "error", 
-                     as.character(round(rand.err[rand.id[5]] *100)),"%",sep=" "))
-
-
-
-# FOR N:S NOT MAINTAINED. This will plot the optimal model fit for a sample of the random realizations,
-#as well as what type of model it is.
 
 
 levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
@@ -664,20 +688,13 @@ levelplot(var1.pred.3 ~ x.3 + y.3 | z.3, as.data.frame(res3D),
           main=paste("Realization", as.character(rand.id[3]), "mod=", mod.opt.th[,1][rand.id[3]], ""))
 levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D),
           main=paste("Realization", as.character(rand.id[4]), "mod=", mod.opt.th[,1][rand.id[4]], ""))
+
+
+
   
 require(plot3D)
 require(cowplot)
 
-p1<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=215, bty="f", 
-         pch=1)
-p2<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.1,ticktype="detailed", theta=0, phi=215, bty="f", 
-             pch=1)
-p3<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.2,ticktype="detailed", theta=0, phi=215, bty="f", 
-             pch=1)
-p4<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.3,ticktype="detailed", theta=0, phi=215, bty="f", 
-             pch=1)
-p5<-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.4,ticktype="detailed", theta=0, phi=215, bty="f", 
-             pch=1)
 
 layout(matrix(c(1,2,3,4),2))
 
