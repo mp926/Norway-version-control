@@ -580,6 +580,7 @@ save.image(file="SKUVarioNSmaintained.RData")
 
 # PERFORM GLOBAL ORDINARY KRIGING ON THE DATASETS ---------------------------
 
+path<-("C:\\Users\\Matt\\Documents\\Norway\\SGeMS files")
 
 df<-data.frame(read.table(paste(path,"\\Skuterud scaling factors K outliers removed feb 8 2020.dat", sep=""), sep="", skip=8))
 
@@ -620,10 +621,35 @@ res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit
 est3D<-as.data.frame(res3D)
 
 
+
+require(lattice)
+
+# FOR N:S MAINTAINED
+
+levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
+          main=paste("Original data fitting", "mod=Exp", ""))
+
+levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[1]), "error", 
+                     as.character(round(rand.err[rand.id[1]] *100)),"%",sep=" "))
+levelplot(var1.pred.1 ~ x.2 + y.2 | z.2, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[2]), "error", 
+                     as.character(round(rand.err[rand.id[2]] *100)),"%",sep=" "))
+levelplot(var1.pred.2 ~ x.3 + y.3 | z.3, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[3]), "error", 
+                     as.character(round(rand.err[rand.id[3]] *100)),"%",sep=" "))
+levelplot(var1.pred.3 ~ x.4 + y.4 | z.4, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[4]), "error", 
+                     as.character(round(rand.err[rand.id[4]] *100)),"%",sep=" "))
+levelplot(var1.pred.4 ~ x.5 + y.5 | z.5, as.data.frame(res3D),
+          main=paste("Realization", as.character(rand.id[5]), "error", 
+                     as.character(round(rand.err[rand.id[5]] *100)),"%",sep=" "))
+
+
+
 # FOR N:S NOT MAINTAINED. This will plot the optimal model fit for a sample of the random realizations,
 #as well as what type of model it is.
 
-require(lattice)
 
 levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
 main=paste("Original data fitting", "mod=Exp", ""))
