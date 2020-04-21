@@ -233,15 +233,100 @@ load(paste(path,"/random index selection.RData", sep=""))
 
 # Add random error to the variograms by bootstrapping the gamma values only (n:S ratio not maintained) -----
 
+# We will simulate variogram models, based on a fitting of the original data,
+# and then increase the nugget parameter by a random amount taken from a uniform distribution
 
 # SFTHETA --
 
-n=1000 # 1000 runs 
+n=1000 # 1000 realizations 
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
+
+# fit the original variogram data with the model with lowest SSE 
 vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
-vth.orig.fit<-fit.variogram(vth.orig,vgm(psill=0.06,"Exp",range=45, nugget=0.10),fit.ranges=FALSE)
-origmodel.lines.th<-variogramLine(vth.orig.fit,maxdist=60,n=200) # create a line of the variogram model for plotting
-origmodel.lines.th$type=rep("None",times=200)
+vth.orig.fit<-list()
+mods<-c("Nug","Lin","Sph","Exp","Gau")
+SSE.orig<-matrix(nrow=length(mods), ncol=2)
+for (i in 1:length(mods)){
+  if (mods[i]=="Nug"){
+vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.06,mods[i],range=0, nugget=0.10),fit.ranges=FALSE)
+  }else{
+    vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.06,mods[i],range=45, nugget=0.10),fit.ranges=FALSE)
+  }
+  SSE.orig[i,1]<-attr(vth.orig.fit[[i]],"SSE")
+  SSE.orig[i,2]<-levels(vth.orig.fit[[i]]$model)[vth.orig.fit[[i]]$model[2]]
+}
+
+best.fit.th<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
+fit.id<-which.min(SSE.orig[,1])
+print(best.fit.th)
+
+origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id]],maxdist=60,n=100) # create a line of the variogram model for plotting
+
+
+# Extract the variogram model parameters from the original fit
+orig.sill=vth.orig.fit[[fit.id]]$psill[2] + vth.orig.fit[[fit.id]]$psill[1]
+orig.nug=vth.orig.fit[[fit.id]]$psill[1]
+orig.rng=vth.orig.fit[[fit.id]]$range[2]
+
+ns=vth.orig.fit[[fit.id]]$psill[1]/(vth.orig.fit[[fit.id]]$psill[2]+vth.orig.fit[[fit.id]]$psill[1])
+
+
+# Add random error to the nugget value for n realizations pulled from a uniform distribution, with replacement (bootstrapping)
+
+rand.err<-sample(runif(1000,min=0.95,max=1.05),replace=TRUE)
+
+rand.nug<-matrix(nrow=n)
+vth.rand<-list()
+vth.modlines<-list()
+ns.rand<-data.frame()
+for (i in 1:n){
+  rand.nug[i,]<-orig.nug*rand.err[i]
+  vth.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
+  vth.modlines[[i]]<-variogramLine(vth.rand[[i]],maxdist=60,n=100)
+  ns.rand[i,1]<-vth.rand[[i]]$psill[1]/(vth.rand[[i]]$psill[2] + vth.rand[[i]]$psill[1])
+}
+
+
+
+require(ggplot2) # Plot the resulting variograms
+require(data.table)
+
+
+dfmod<-matrix(nrow=n*100,ncol=2)
+for(i in 1:n){
+  dfmod[,1]<-rep(t(vth.modlines[[1]]$dist), times=n)
+  dfmod[seq(1,100000,100)[i]:seq(100,100000,100)[i],2]<-t(vth.modlines[[i]]$gamma)
+}
+
+dfmod<-as.data.frame(dfmod)
+names(dfmod)<-c("dist","gamma")
+dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=100)
+
+
+modlist = list()
+for (i in 1:length(rand.id)) {
+  modlist[[i]] <- subset(dfmod, samp==paste("sample", rand.id[i], sep=" "))
+}
+dfmodrand<-rbindlist(modlist) 
+
+g1<-ggplot(vth.orig,aes(x=dist,y=gamma)) +  # plot the variograms
+  geom_point() +
+  geom_line(origmodel.lines.th, mapping=aes(x=dist,y=gamma), color="black", lwd=1.5) +
+  geom_line(dfmodrand,mapping=aes(x=dist,y=gamma,color=samp)) +
+  xlab("Distance (cm)") +
+  ylab(expression(gamma)) +
+  ggtitle("Random nugget SFth") +
+  theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
+                     legend.position="")
+
+g1
+
+
+
+
+
+
+
 
 gam.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
 rand.err=matrix(nrow=n,ncol=length(vth.orig$gamma))
@@ -678,8 +763,9 @@ require(lattice)
 levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
 main=paste("Original data fitting", "mod=Exp", ""))
 
-levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][1], ""))
+#levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
+#          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][1], ""))
+
 levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
           main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][rand.id[1]], ""))
 levelplot(var1.pred.2 ~ x.2 + y.2 | z.2, as.data.frame(res3D),
