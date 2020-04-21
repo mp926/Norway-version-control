@@ -257,18 +257,18 @@ vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.06,mods[i],range=0, nugget
 }
 
 best.fit.th<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
-fit.id<-which.min(SSE.orig[,1])
+fit.id.th<-which.min(SSE.orig[,1])
 print(best.fit.th)
 
-origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id]],maxdist=60,n=100) # create a line of the variogram model for plotting
+origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id.th]],maxdist=60,n=100) # create a line of the variogram model for plotting
 
 
 # Extract the variogram model parameters from the original fit
-orig.sill=vth.orig.fit[[fit.id]]$psill[2] + vth.orig.fit[[fit.id]]$psill[1]
-orig.nug=vth.orig.fit[[fit.id]]$psill[1]
-orig.rng=vth.orig.fit[[fit.id]]$range[2]
+orig.sill=vth.orig.fit[[fit.id.th]]$psill[2] + vth.orig.fit[[fit.id.th]]$psill[1]
+orig.nug=vth.orig.fit[[fit.id.th]]$psill[1]
+orig.rng=vth.orig.fit[[fit.id.th]]$range[2]
 
-ns=vth.orig.fit[[fit.id]]$psill[1]/(vth.orig.fit[[fit.id]]$psill[2]+vth.orig.fit[[fit.id]]$psill[1])
+ns=vth.orig.fit[[fit.id.th]]$psill[1]/(vth.orig.fit[[fit.id.th]]$psill[2]+vth.orig.fit[[fit.id.th]]$psill[1])
 
 
 # Add random error to the nugget value for n realizations pulled from a uniform distribution, with replacement (bootstrapping)
@@ -281,7 +281,7 @@ vth.modlines<-list()
 ns.rand<-data.frame()
 for (i in 1:n){
   rand.nug[i,]<-orig.nug*rand.err[i]
-  vth.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
+  vth.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id.th],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
   vth.modlines[[i]]<-variogramLine(vth.rand[[i]],maxdist=60,n=100)
   ns.rand[i,1]<-vth.rand[[i]]$psill[1]/(vth.rand[[i]]$psill[2] + vth.rand[[i]]$psill[1])
 }
@@ -342,18 +342,18 @@ for (i in 1:length(mods)){
 }
 
 best.fit.h<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
-fit.id<-which.min(SSE.orig[,1])
+fit.id.h<-which.min(SSE.orig[,1])
 print(best.fit.h)
 
-origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id]],maxdist=60,n=100) # create a line of the variogram model for plotting
+origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id.h]],maxdist=60,n=100) # create a line of the variogram model for plotting
 
 
 # Extract the variogram model parameters from the original fit
-orig.sill=vh.orig.fit[[fit.id]]$psill[2] + vh.orig.fit[[fit.id]]$psill[1]
-orig.nug=vh.orig.fit[[fit.id]]$psill[1]
-orig.rng=vh.orig.fit[[fit.id]]$range[2]
+orig.sill=vh.orig.fit[[fit.id.h]]$psill[2] + vh.orig.fit[[fit.id.h]]$psill[1]
+orig.nug=vh.orig.fit[[fit.id.h]]$psill[1]
+orig.rng=vh.orig.fit[[fit.id.h]]$range[2]
 
-ns=vh.orig.fit[[fit.id]]$psill[1]/(vh.orig.fit[[fit.id]]$psill[2]+vh.orig.fit[[fit.id]]$psill[1])
+ns=vh.orig.fit[[fit.id.h]]$psill[1]/(vh.orig.fit[[fit.id.h]]$psill[2]+vh.orig.fit[[fit.id.h]]$psill[1])
 
 
 rand.nug<-matrix(nrow=n)
@@ -362,7 +362,7 @@ vh.modlines<-list()
 ns.rand<-data.frame()
 for (i in 1:n){
   rand.nug[i,]<-orig.nug*rand.err[i]
-  vh.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
+  vh.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id.h],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
   vh.modlines[[i]]<-variogramLine(vh.rand[[i]],maxdist=60,n=100)
   ns.rand[i,1]<-vh.rand[[i]]$psill[1]/(vh.rand[[i]]$psill[2] + vh.rand[[i]]$psill[1])
 }
@@ -651,9 +651,9 @@ levelplot(var1.pred.5 ~ x + y | z, as.data.frame(res3D),
 res3D<-list()
 for (i in 1:length(rand.id)){
   if(i==1){
-    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.orig.fit,nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.orig.fit[[fit.id.h]],nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
-    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vth.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
   }
 }
 
@@ -662,40 +662,47 @@ est3D<-as.data.frame(res3D)
 
 
 require(lattice)
-
+require(cowplot)
 
 levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
-main=paste("Original data fitting", "mod=Exp", ""))
+main=paste("Original data fitting", "mod=Gaus", ""))
 
 #levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
 #          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][1], ""))
 
 levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][rand.id[1]], ""))
+          main=paste("Realization", as.character(rand.id[1])))
 levelplot(var1.pred.2 ~ x.2 + y.2 | z.2, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[2]), "mod=", mod.opt.th[,1][rand.id[2]], ""))
+          main=paste("Realization", as.character(rand.id[2])))
 levelplot(var1.pred.3 ~ x.3 + y.3 | z.3, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[3]), "mod=", mod.opt.th[,1][rand.id[3]], ""))
+          main=paste("Realization", as.character(rand.id[3])))
 levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[4]), "mod=", mod.opt.th[,1][rand.id[4]], ""))
-
-
-
-  
-require(plot3D)
-require(cowplot)
-
+          main=paste("Realization", as.character(rand.id[4])))
 
 layout(matrix(c(1,2,3,4),2))
 
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred,ticktype="detailed", theta=0, phi=215, bty="f", 
-         pch=1)
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.1,ticktype="detailed", theta=0, phi=215, bty="f", 
-         pch=1)
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.2,ticktype="detailed", theta=0, phi=215, bty="f", 
-         pch=1)
-points3D(est3D$x,est3D$y,est3D$z,colvar=est3D$var1.pred.3,ticktype="detailed", theta=0, phi=215, bty="f", 
-             pch=1)
+hist(est3D$var1.pred.1, main=paste("Realization", as.character(rand.id[1])), 
+     xlab="Kriging prediction", 
+     col="gray")
+text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.1),digits=3)), as.character(round(max(est3D$var1.pred.1),digits=3))))
+hist(est3D$var1.pred.2,main=paste("Realization", as.character(rand.id[2])),
+     xlab="Kriging prediction",
+     col="gray")
+text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.2),digits=3)), as.character(round(max(est3D$var1.pred.2),digits=3))))
+hist(est3D$var1.pred.3,main=paste("Realization", as.character(rand.id[3])),
+     xlab="Kriging prediction",
+     col="gray")
+text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.3),digits=3)), as.character(round(max(est3D$var1.pred.3),digits=3))))
+hist(est3D$var1.pred.4,main=paste("Realization", as.character(rand.id[4])),
+     xlab="Kriging prediction",
+     col="gray")
+text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.4),digits=3)), as.character(round(max(est3D$var1.pred.4),digits=3))))
+
+
+
+
+
+
 
 # Clay content
 clay<-data.frame(read.table(paste(path,"\\clay content points.dat", sep=""), sep="", skip=6))
