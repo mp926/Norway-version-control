@@ -324,86 +324,74 @@ g1
 
 
 
-# SFH --
+# SFH ---
 
-n=1000 # 1000 runs 
 vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
-vh.orig.fit<-fit.variogram(vh.orig,vgm(psill=0.12,"Sph",range=20, nugget=0.08))
-origmodel.lines.h<-variogramLine(vh.orig.fit,maxdist=60,n=200)
-origmodel.lines.th$type=rep("None",times=200)
+vh.orig.fit<-list()
+mods<-c("Nug","Lin","Sph","Exp","Gau")
+SSE.orig<-matrix(nrow=length(mods), ncol=2)
 
-gam.err=matrix(nrow=n,ncol=length(vh.orig$gamma))
-vh<-list()
-vh.fit<-list()
-SSEh.mod<-data.frame()
-vmodel.linesh<-list()
-mod.id<-c("Sph","Exp","Lin")
-mod.opt.h<-data.frame()
-nug<-matrix(nrow=n)
-for (i in 1:n){
-  gam.err[i,]<-vh.orig$gamma*rand.err[i,] # Add error to the gamma for 1000 variograms. rand.err is defined earlier
-  vh[[i]]<-vh.orig
-  vh[[i]]$gamma=gam.err[i,]# Substitute the gammas with error into the original variogram
-  nug[i]=vh[[i]]$gamma[which.min(vh[[i]]$gamma)]
-  
-  for (j in 1:length(mod.id)){
-    mod<-fit.variogram(vh[[i]], vgm(psill=vh[[i]]$gamma[5]-nug[i], paste(mod.id[j]),
-                                     nugget=nug[i], range=vh[[i]]$dist[which.max(vh[[i]]$gamma)])) #fit each variogram with 3 models
-    SSEh.mod[i,j]<-attr(mod,"SSErr")
+for (i in 1:length(mods)){
+  if (mods[i]=="Nug"){
+    vh.orig.fit[[i]]<-fit.variogram(vh.orig,vgm(psill=0.12,mods[i],range=0, nugget=0.08))
+  }else{
+    vh.orig.fit[[i]]<-fit.variogram(vh.orig,vgm(psill=0.12,mods[i],range=20, nugget=0.08))
   }
-  names(SSEh.mod)<-mod.id
-  
-  vh.fit[[i]]<-fit.variogram(vh[[i]], vgm(psill=vh[[i]]$gamma[5]-nug[i], model=names(which.min(SSEh.mod[i,])),
-                                            nugget=nug[i], range=vh[[i]]$dist[which.max(vh[[i]]$gamma)])) #fit each variogram with the best model fit
-  
-  vmodel.linesh[[i]]<-variogramLine(vh.fit[[i]],maxdist=60,n=50) # simulate model line output for plotting  
-  
-  mod.opt.h[i,1]<-as.character(vh.fit[[i]]$model[2]) # optimal model type for each realization based on SSE 
+  SSE.orig[i,1]<-attr(vh.orig.fit[[i]],"SSE")
+  SSE.orig[i,2]<-levels(vh.orig.fit[[i]]$model)[vh.orig.fit[[i]]$model[2]]
 }
 
-# Figure out how many realizations use each model type
-barplot(table(mod.opt.h))
+best.fit.h<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
+fit.id<-which.min(SSE.orig[,1])
+print(best.fit.h)
+
+origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id]],maxdist=60,n=100) # create a line of the variogram model for plotting
 
 
-require(ggplot2) # Plot the resulting variograms
-require(data.table)
+# Extract the variogram model parameters from the original fit
+orig.sill=vh.orig.fit[[fit.id]]$psill[2] + vh.orig.fit[[fit.id]]$psill[1]
+orig.nug=vh.orig.fit[[fit.id]]$psill[1]
+orig.rng=vh.orig.fit[[fit.id]]$range[2]
 
-dfdat<-matrix(nrow=n*5,ncol=2)
-dfmod<-matrix(nrow=n*50,ncol=3)
+ns=vh.orig.fit[[fit.id]]$psill[1]/(vh.orig.fit[[fit.id]]$psill[2]+vh.orig.fit[[fit.id]]$psill[1])
+
+
+rand.nug<-matrix(nrow=n)
+vh.rand<-list()
+vh.modlines<-list()
+ns.rand<-data.frame()
+for (i in 1:n){
+  rand.nug[i,]<-orig.nug*rand.err[i]
+  vh.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
+  vh.modlines[[i]]<-variogramLine(vh.rand[[i]],maxdist=60,n=100)
+  ns.rand[i,1]<-vh.rand[[i]]$psill[1]/(vh.rand[[i]]$psill[2] + vh.rand[[i]]$psill[1])
+}
+
+
+dfmod<-matrix(nrow=n*100,ncol=2)
 for(i in 1:n){
-  dfdat[,1]<-rep(t(vh[[1]]$dist), times=n)
-  dfdat[seq(1,5000,5)[i]:seq(5,5000,5)[i],2]<-t(vh[[i]]$gamma)
-  dfmod[,1]<-rep(t(vmodel.linesh[[1]]$dist), times=n)
-  dfmod[seq(1,50000,50)[i]:seq(50,50000,50)[i],2]<-t(vmodel.linesh[[i]]$gamma)
+  dfmod[,1]<-rep(t(vh.modlines[[1]]$dist), times=n)
+  dfmod[seq(1,100000,100)[i]:seq(100,100000,100)[i],2]<-t(vh.modlines[[i]]$gamma)
 }
 
-dfdat<-as.data.frame(dfdat)
-names(dfdat)<-c("dist","gamma")
 dfmod<-as.data.frame(dfmod)
 names(dfmod)<-c("dist","gamma")
-dfdat$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=5)
-dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=50)
+dfmod$samp<-rep(paste("sample",as.character(seq(1,n,1))),each=100)
 
 
-# Look at the variogram representation for the 50 random realizations
-barplot(table(mod.opt.h[rand.id,1]))
-
-
-datalist = list()
 modlist = list()
 for (i in 1:length(rand.id)) {
-  datalist[[i]] <- subset(dfdat, samp==paste("sample", rand.id[i], sep=" "))
   modlist[[i]] <- subset(dfmod, samp==paste("sample", rand.id[i], sep=" "))
 }
-dfrand<-rbindlist(datalist)
 dfmodrand<-rbindlist(modlist) 
 
-g2<-ggplot(dfrand,aes(x=dist,y=gamma, color=samp)) +  # plot the variograms
+g2<-ggplot(vh.orig,aes(x=dist,y=gamma)) +  # plot the variograms
   geom_point() +
-  geom_line(data=dfmodrand,aes(x=dist,y=gamma, color=samp)) +
+  geom_line(origmodel.lines.h, mapping=aes(x=dist,y=gamma), color="black", lwd=1.5) +
+  geom_line(dfmodrand,mapping=aes(x=dist,y=gamma,color=samp)) +
   xlab("Distance (cm)") +
   ylab(expression(gamma)) +
-  ggtitle("Random gamma SFh") +
+  ggtitle("Random nugget SFh") +
   theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
                      legend.position="")
 
