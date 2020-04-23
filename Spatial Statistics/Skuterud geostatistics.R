@@ -576,6 +576,15 @@ save.image(file="SKUVarioNSmaintained.RData")
 
 # PERFORM GLOBAL ORDINARY KRIGING ON THE DATASETS ---------------------------
 
+# LOAD IN RESULTS THAT WERE ALREADY CALCULATED
+
+load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\myobjects")
+
+
+
+
+# IF YOU WANT TO START FROM THE BEGINNING
+
 path<-("C:\\Users\\Matt\\Documents\\Norway\\SGeMS files")
 
 df<-data.frame(read.table(paste(path,"\\Skuterud scaling factors K outliers removed feb 8 2020.dat", sep=""), sep="", skip=8))
@@ -653,12 +662,14 @@ for (i in 1:length(rand.id)){
   if(i==1){
     res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.orig.fit[[fit.id.h]],nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
-    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.fit[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
+    res3D[[i]] <- krige(formula = sfth ~ 1, df.sku2016, grid3D, model = vh.rand[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
   }
 }
 
 
-est3D<-as.data.frame(res3D)
+est3D.vh<-as.data.frame(res3D)
+
+save(list=c("est3D.vth","est3D.vh"),file="myobjects", compress="bzip2")
 
 
 require(lattice)
@@ -667,38 +678,46 @@ require(cowplot)
 levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
 main=paste("Original data fitting", "mod=Gaus", ""))
 
-#levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
-#          main=paste("Realization", as.character(rand.id[1]), "mod=", mod.opt.th[,1][1], ""))
-
-levelplot(var1.pred.1 ~ x.1 + y.1 | z.1, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[1])))
-levelplot(var1.pred.2 ~ x.2 + y.2 | z.2, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[2])))
-levelplot(var1.pred.3 ~ x.3 + y.3 | z.3, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[3])))
-levelplot(var1.pred.4 ~ x.4 + y.4 | z.4, as.data.frame(res3D),
-          main=paste("Realization", as.character(rand.id[4])))
 
 layout(matrix(c(1,2,3,4),2))
 
-hist(est3D$var1.pred.1, main=paste("Realization", as.character(rand.id[1])), 
+hist(est3D.vth$var1.pred.1, main=paste("Realization", as.character(rand.id[1]),"SFTH"), 
      xlab="Kriging prediction", 
      col="gray")
-text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.1),digits=3)), as.character(round(max(est3D$var1.pred.1),digits=3))))
-hist(est3D$var1.pred.2,main=paste("Realization", as.character(rand.id[2])),
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vth$var1.pred.1),digits=3)), as.character(round(max(est3D.vth$var1.pred.1),digits=3))))
+hist(est3D.vth$var1.pred.2,main=paste("Realization", as.character(rand.id[2]),"SFTH"),
      xlab="Kriging prediction",
      col="gray")
-text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.2),digits=3)), as.character(round(max(est3D$var1.pred.2),digits=3))))
-hist(est3D$var1.pred.3,main=paste("Realization", as.character(rand.id[3])),
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vth$var1.pred.2),digits=3)), as.character(round(max(est3D.vth$var1.pred.2),digits=3))))
+hist(est3D.vth$var1.pred.3,main=paste("Realization", as.character(rand.id[3]),"SFTH"),
      xlab="Kriging prediction",
      col="gray")
-text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.3),digits=3)), as.character(round(max(est3D$var1.pred.3),digits=3))))
-hist(est3D$var1.pred.4,main=paste("Realization", as.character(rand.id[4])),
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vth$var1.pred.3),digits=3)), as.character(round(max(est3D.vth$var1.pred.3),digits=3))))
+hist(est3D.vth$var1.pred.4,main=paste("Realization", as.character(rand.id[4]),"SFTH"),
      xlab="Kriging prediction",
      col="gray")
-text(1.05,40000, paste("range =", as.character(round(min(est3D$var1.pred.4),digits=3)), as.character(round(max(est3D$var1.pred.4),digits=3))))
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vth$var1.pred.4),digits=3)), as.character(round(max(est3D.vth$var1.pred.4),digits=3))))
 
 
+
+layout(matrix(c(1,2,3,4),2))
+
+hist(est3D.vh$var1.pred.1, main=paste("Realization", as.character(rand.id[1]),"SFH"), 
+     xlab="Kriging prediction", 
+     col="gray")
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vh$var1.pred.1),digits=3)), as.character(round(max(est3D.vh$var1.pred.1),digits=3))))
+hist(est3D.vh$var1.pred.2,main=paste("Realization", as.character(rand.id[2]),"SFH"),
+     xlab="Kriging prediction",
+     col="gray")
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vh$var1.pred.2),digits=3)), as.character(round(max(est3D.vh$var1.pred.2),digits=3))))
+hist(est3D.vh$var1.pred.3,main=paste("Realization", as.character(rand.id[3]),"SFH"),
+     xlab="Kriging prediction",
+     col="gray")
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vh$var1.pred.3),digits=3)), as.character(round(max(est3D.vh$var1.pred.3),digits=3))))
+hist(est3D.vh$var1.pred.4,main=paste("Realization", as.character(rand.id[4]),"SFH"),
+     xlab="Kriging prediction",
+     col="gray")
+text(1.05,35000, paste("range =", as.character(round(min(est3D.vh$var1.pred.4),digits=3)), as.character(round(max(est3D.vh$var1.pred.4),digits=3))))
 
 
 
