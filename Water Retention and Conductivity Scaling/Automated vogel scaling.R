@@ -76,19 +76,19 @@ fit.stat$sse.vgu=(fit.stat$rmse.vgu)^2*fit.stat$n
 
 for (i in 1:130){
 if(fit.stat$n[i]/7 <= 40){
-fit.stat$AICc.vgb[i]= fit.stat$n[i]*log(fit.stat$sse.vgb[i]/fit.stat$n[i]) + 2*7 + (2*7*(7+1))/(n-7-1) #corrected Akaike criterion for small sample sizes, k = 7 for vgb
+fit.stat$AICc.vgb[i]= fit.stat$n[i]*log(fit.stat$sse.vgb[i]/fit.stat$n[i]) + 2*7 + (2*7*(7+1))/(fit.stat$n-7-1) #corrected Akaike criterion for small sample sizes, k = 7 for vgb
 } else {
   fit.stat$AICc.vgb[i]= fit.stat$n[i]*log(fit.stat$sse.vgb[i]/fit.stat$n[i]) + 2*7
   }
 if(fit.stat$n[i]/4 <= 40){
-  fit.stat$AICc.vgu[i]= fit.stat$n[i]*log(fit.stat$sse.vgu[i]/fit.stat$n[i]) + 2*4 + (2*4*(4+1))/(n-4-1) # k = 4 for vgu
+  fit.stat$AICc.vgu[i]= fit.stat$n[i]*log(fit.stat$sse.vgu[i]/fit.stat$n[i]) + 2*4 + (2*4*(4+1))/(fit.stat$n[i]-4-1) # k = 4 for vgu
 } else {
   fit.stat$AICc.vgu[i]= fit.stat$n[i]*log(fit.stat$sse.vgu[i]/fit.stat$n[i]) + 2*4
   }
 }
  
 
-# idx<-which(fit.stat$AICc.vgb>fit.stat$AICc.vgu) # identify which WRCs are better fit by vG1980 based on AICc
+#idx<-which(fit.stat$AICc.vgb>fit.stat$AICc.vgu) # identify which WRCs are better fit by vG1980 based on AICc
 
 
 
@@ -117,7 +117,8 @@ K<-list()
 #K100<-1
 
 for (i in 1:length(df.par$thrvGB)){
-  K[[i]]<-Conductivity(df.par[i,c(3,4,12,13)],h.cm[[i]])
+  #K[[i]]<-Conductivity(df.par[i,c(3,4,12,13)],h.cm[[i]]) Unimodal
+  K[[i]]<-Conductivity(df.par[i,7:13],h.cm[[i]]) # Bimodal
   #K10[i]<-K[[i]][which(h.cm[[i]]==10)]
   #K30[i]<-K[[i]][which(h.cm[[i]]==30)]
   #K100[i]<-K[[i]][which(h.cm[[i]]==100)]
@@ -183,13 +184,13 @@ image_write(m, "VSCALE.gif")
 
 # Compare scaled plots of Unimodal vs. Bimodal fits
 
-# par(mfrow=c(2,2))
-# hist(scaled$scaling.factors$a.theta[idx], main="vG 1980 SFTH")
-# hist(scaled$scaling.factors$a.theta[-idx], main="Durner 1994 SFTH")
-# hist(scaled$scaling.factors$a.h[idx], main="vG 1980 SFH")
-# hist(scaled$scaling.factors$a.h[-idx], main="Durner 1994 SFH")
+#par(mfrow=c(2,2))
+#hist(scaled$scaling.factors$a.theta[idx], main="vG 1980 SFTH")
+#hist(scaled$scaling.factors$a.theta[-idx], main="Durner 1994 SFTH")
+#hist(scaled$scaling.factors$a.h[idx], main="vG 1980 SFH")
+#hist(scaled$scaling.factors$a.h[-idx], main="Durner 1994 SFH")
 
-par(mfrow=c(2,2)) # plot the unscaled, scaled, back-transformed correlation
+par(mfrow=c(1,2)) # plot the unscaled, scaled, back-transformed correlation
 
 btransh<-list() # back transform the data 
 btransth<-list()
@@ -202,16 +203,22 @@ lm.h<-lm(log10(unlist(btransh)+1)~log10(unlist(h.cm)+1))
 lm.th<-lm(unlist(btransth)~unlist(theta.v))
 
 
-plot(log10(unlist(h.cm)),unlist(theta.v),
-     xlab="pressure potential (pF)",
-     ylab="VWC", col="black",
-     main="Unscaled data")
+require(ggplot2)
 
 
-plot(log10(unlist(scaled[[2]])),unlist(scaled[[3]]),
-              xlab="scaled pressure potential (pF)",
-              ylab="scaled VWC", col="black",
-              main="Scaled data")
+g1<-ggplot()+
+  geom_point(aes(x=log10(unlist(h.cm)),y=unlist(theta.v)),pch=21)+
+  xlab("Pressure potential (pF)")+
+  ylab(expression('Volumetric water content' ~ ' ' ~ (cm^3 * cm^-3))) +
+  theme_bw() + theme(axis.text=element_text(size=14),axis.title=element_text(size=12))
+
+g2<-ggplot()+
+  geom_point(aes(x=log10(unlist(scaled[[2]])),y=unlist(scaled[[3]])),pch=21) +
+  xlab("Scaled Pressure potential (pF)")+
+  ylab(expression('Scaled Volumetric water content' ~ ' ' ~ (cm^3 * cm^-3))) +
+  theme_bw() + theme(axis.text=element_text(size=14),axis.title=element_text(size=12))
+
+
 
 plot(log10(unlist(btransh)),log10(unlist(h.cm)),
   xlab="pressure potential * scaling factor",
@@ -231,13 +238,23 @@ plot(log10(unlist(btransh)),log10(unlist(h.cm)),
 # plot the unscaled and scaled hydraulic conductivity 
 
 
-plot(log10(unlist(h.cm)),log10(unlist(K)),
-     xlab="pressure potential (pF)",
-     ylab="Hydraulic conductivity (log10 cm/d)")
+g3<-ggplot()+
+  geom_point(aes(x=log10(unlist(h.cm)), y=log10(unlist(K))),pch=21)+
+     xlab("Pressure potential (pF)")+
+     ylab("Hydraulic conductivity (log10 cm/d)")+
+      theme_bw() + theme(axis.text=element_text(size=14),axis.title=element_text(size=12))
 
-plot(log10(unlist(scaled[[2]])), log10(unlist(scaled[[4]])),
-     xlab="scaled pressure potential (pF)",
-     ylab="scaled Hydraulic conductivity (log10 cm/d)")
+g4<-ggplot()+
+  geom_point(aes(x=log10(unlist(scaled[[2]])),y=log10(unlist(scaled[[4]]))),pch=21)+
+      xlab("Scaled Pressure potential (pF)")+
+      ylab("Scaled Hydraulic conductivity (log10 cm/d)")+
+      theme_bw() + theme(axis.text=element_text(size=14),axis.title=element_text(size=12))
+
+
+# Create a single plot with all scaled and unscaled data
+require(cowplot)
+plot_grid(g1,g2,g3,g4, labels="AUTO")
+
 
 
 # scaled.th.lab<-unlist(scaled[[3]][1:122])
@@ -271,7 +288,7 @@ ggqqplot(scaled$scaling.factors$a.theta[80:130], conf.int=TRUE, conf.int.level=0
 
 
 
-## Create 2D plot showing how scaling factors are implemeneted in HYDRUS -------------------------------
+## Create 2D contour plot showing how scaling factors are implemeneted in HYDRUS -------------------------------
 top.th<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFTH.mat")
 top.h<-readMat("C:\\Users\\Matt\\Documents\\Norway\\Water retention\\Vogel scaling\\HYDRUS_top_layer_SFH.mat")
 top.coords<-data.frame(top.th$top[,1:2]) # Z is not needed since it is only the top layer 
