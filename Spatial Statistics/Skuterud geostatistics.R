@@ -273,7 +273,7 @@ ns=vth.orig.fit[[fit.id.th]]$psill[1]/(vth.orig.fit[[fit.id.th]]$psill[2]+vth.or
 
 # Add random error to the nugget value for n realizations pulled from a uniform distribution, with replacement (bootstrapping)
 
-rand.err<-sample(runif(1000,min=0.95,max=1.05),replace=TRUE)
+rand.err<-sample(runif(1000,min=0.9,max=1.1),replace=TRUE)
 
 rand.nug<-matrix(nrow=n)
 vth.rand<-list()
@@ -660,14 +660,14 @@ levelplot(var1.pred.5 ~ x + y | z, as.data.frame(res3D),
 res3D<-list()
 for (i in 1:length(rand.id)){
   if(i==1){
-    res3D[[i]] <- krige(formula = sfh ~ 1, df.sku2016, grid3D, model = vh.orig.fit[[fit.id.h]],nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
+    res3D[[i]] <- krige(formula = sfh ~ 1, df.sku2016, grid3D, model = vth.orig.fit[[fit.id.th]],nsim=0,maxdist=Inf,nmax=Inf,nmin=0) 
   } else {
-    res3D[[i]] <- krige(formula = sfh ~ 1, df.sku2016, grid3D, model = vh.rand[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
+    res3D[[i]] <- krige(formula = sfh ~ 1, df.sku2016, grid3D, model = vth.rand[[rand.id[i-1]]],nsim=0, maxdist=Inf,nmin=0)
   }
 }
 
 
-est3D.vh<-as.data.frame(res3D)
+est3D.vth<-as.data.frame(res3D)
 
 save(list=c("est3D.vth","est3D.vh"),file="myobjects", compress="bzip2")
 
