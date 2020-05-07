@@ -39,14 +39,15 @@ df$Ks<-Ks$`Ksat (cm/d)`
 
 names(df)<-c("x","y","z","sfh","sfth","sfK","Ks")
 
-# if new random selection is needed
-rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
-
 # if you want to use the previously selected random index
 cwd<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control")
 path<-paste(cwd,"/Spatial Statistics", sep="")
 setwd(path)
 load(paste(path,"/random index selection.RData", sep=""))
+
+# if new random selection is desired
+rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 variograms
+
 
 # Bootstrap the variograms for SFTheta SFh and Ks by removing a random spatial data point  ---------------------------------------------------
 # 
@@ -273,7 +274,7 @@ ns=vth.orig.fit[[fit.id.th]]$psill[1]/(vth.orig.fit[[fit.id.th]]$psill[2]+vth.or
 
 # Add random error to the nugget value for n realizations pulled from a uniform distribution, with replacement (bootstrapping)
 
-rand.err<-sample(runif(1000,min=0.95,max=1.05),replace=TRUE)
+rand.err<-sample(runif(1000,min=0.9,max=1.1),replace=TRUE)
 
 rand.nug<-matrix(nrow=n)
 vth.rand<-list()
@@ -686,8 +687,22 @@ for (i in 1:length(rand.id)){
 est3D.vh<-as.data.frame(res3D)
 
 
+# Determine the max and min of each kriging grid output, as well as the global min and max for all realizations
+pred.idx<-seq(from=4,to=250,by=5)
+sim.min.vh<-apply(est3D.vh[,pred.idx],2,min)
+sim.max.vh<-apply(est3D.vh[,pred.idx],2,max)
+sim.min.vh[1] # the first position is the original model fitting
+sim.max.vh[1]
 
-save(list=c("est3D.vth","est3D.vh"),file="myobjects", compress="bzip2")
+sim.min.vth<-apply(est3D.vth[,pred.idx],2,min)
+sim.max.vth<-apply(est3D.vth[,pred.idx],2,max)
+sim.min.vth[1]
+sim.max.vth[1]
+
+gl.minmax<-data.frame(vth=c(min(sim.min.vth),max(sim.max.vth)),vh=c(min(sim.min.vh),max(sim.max.vh))) #global min and max for all kriging outputs
+rownames(gl.minmax)<-c("global min","global max")
+
+save(list=c("est3D.vth","est3D.vh"),file="krig maps", compress="bzip2")
 
 
 require(lattice)

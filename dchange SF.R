@@ -9,7 +9,7 @@ setwd(paste(dir,subdir,sep=""))
 
 # Load in the kriging map outputs 
 
-load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\myobjects")
+load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\krig maps")
 
 # Load in the coordinate indices taken from the k nearest neighbor searching between the hydrus 
 # coordinates and the kriging map outputs 
