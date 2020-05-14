@@ -12,20 +12,20 @@ setwd(paste(dir,subdir,sep=""))
 load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\krig maps")
 
 # Load in the coordinate indices taken from the k nearest neighbor searching between the hydrus 
-# coordinates and the kriging map outputs 
+# coordinates,the kriging map outputs and the coordinates for each node in the HYDRUS domain 
 
 require(R.matlab)
 
 d.idx<-as.data.frame(readMat("C:\\Users\\Matt\\Documents\\Norway\\HYDRUS and ParaView files\\krigmap_index.mat"))
+coords<-as.data.frame(readMat("C:\\Users\\Matt\\Documents\\Norway\\HYDRUS and ParaView files\\nodal_coords.mat"))
 
-
-# Read in the file where the scaling factors are recorded 
+# Read in the file where the scaling factors are recorded and parse the ASCII file
 # Axz = SFH, Dxz = SFTH
 
-SFdom<-read.table("DOMAIN.DAT", skip=5, header=TRUE, fill=TRUE, nrows=52620) # Pull out the top portion of the file with the scaling factors
-DOM<-read.table("DOMAIN.DAT", skip=52625, header=TRUE, fill=TRUE, nrows=Inf) # Extract the rest of the file
-DOM[,11]<-NA # Add another column so that both the top and bottom portions have the same number of cols
-names(DOM)<-names(SFdom) # Make the names between the two sections the same
+head<-readLines("DOMAIN2.DAT")
+head<-data.frame(newcol=head[1:5])
+SFdom<-read.table("DOMAIN2.DAT", skip=5, header=FALSE, fill=TRUE, nrows=52621) # Pull out the top portion of the file with the scaling factors
+DOM<-read.table("DOMAIN2.DAT", skip=52626, header=FALSE, fill=TRUE, nrows=Inf) # Extract the rest of the file
 
 pred<-seq(from=4,to=250,by=5) # The kringing prediction output is at every 5th column
 
@@ -38,16 +38,49 @@ for (j in 1:ncol(Axz)){
   }
 }
 
+
 ## Loop to modify the DOMAIN.DAT file and run HYDRUS ---------------------
+library(tidyr) # needed for the "unite" function
+
+
+nstep<-22 # number of time steps with outputs of water content (SELECTOR.IN file. 
+          # t=0 is not shown in the file, so make nstep = # of timesteps in file + 1)
+
+th.mapn<-matrix(nrow=nrow(d.idx),ncol=nstep)
+th.idxn<-seq(from=2,to=(nrow(d.idx)+1)*nstep,by=nrow(d.idx)+1)
+name.idx<-seq(from=1,to=(nrow(d.idx))*nstep,by=nrow(d.idx)+1)
+out.path<-("C:\\Users\\Matt\\Documents\\Norway\\HYDRUS and ParaView files\\HYDRUS results with kriged scaling factor maps\\")
+
 
 for(i in 1:ncol(Axz)){
 
-SFdom$Axz[1:nrow(Axz)]<-round(Axz[,1], digits=5) # Add the scaling factors to the data.frame to be written to text
-SFdom$Dxz[1:nrow(Dxz)]<-round(Dxz[,1], digits=5)
+th.map<-NA
+  
+SFdom$Axz[1:nrow(Axz)]<-round(Axz[,i], digits=5) # Add the scaling factors to the data.frame to be written to text
+SFdom$Dxz[1:nrow(Dxz)]<-round(Dxz[,i], digits=5)
 
-SFdom <- rbind(SFdom, DOM) # Put the top and bottom sections together
+SFdom<-unite(SFdom,newcol,sep=" ",remove=TRUE) #Reshape the data back to its original format
+DOM<-unite(DOM,newcol,sep=" ", remove=TRUE) 
+SFdom <- rbind(head,SFdom,DOM) # Put all sections together
 
-write.table(SFdom,file="DOMAIN.DAT",append=FALSE, na="", quote=FALSE, row.names=FALSE, sep="   ") #Write to text file DOMAIN.DAT
+write.table(SFdom,file="DOMAIN.DAT",append=FALSE, na=" ", col.names=FALSE, quote=FALSE, row.names=FALSE, sep="   ") #Write to text file DOMAIN.DAT
 
+system2("h3d_calc.exe") #Run the HYDRUS solver executable file
+
+th.map<-readBin("th.out",numeric(),n=(nrow(d.idx)+1)*nstep,size=4,endian="little") # extract all water content data
+# IMPORTANT! To conserve space, th.map is overwritten every loop!
+
+for(j in 1:nstep){ 
+  th.mapn[,j]<-th.map[th.idxn[j]:(th.idxn[j]+nrow(d.idx)-1)] # Compile the output data based on time step
+}
+
+th.mapn<-as.data.frame(th.mapn)
+th.mapn<-cbind(coords,th.mapn) # add coordinates to the data.frame
+names(th.mapn)<-c("x","y","z",paste(as.character(th.map[name.idx]),"hours"))
+
+
+write.csv(th.mapn,
+          file=paste(out.path,"VWC HYDRUS map ",as.character(nstep)," timesteps kriging map ",as.character(i),".csv", sep=""),
+          quote=FALSE,row.names=FALSE) # export a csv file with the data 
 
 }
