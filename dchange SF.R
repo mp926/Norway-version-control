@@ -78,9 +78,15 @@ th.mapn<-as.data.frame(th.mapn)
 th.mapn<-cbind(coords,th.mapn) # add coordinates to the data.frame
 names(th.mapn)<-c("x","y","z",paste(as.character(th.map[name.idx]),"hours"))
 
-
 write.csv(th.mapn,
           file=paste(out.path,"VWC HYDRUS map ",as.character(nstep)," timesteps kriging map ",as.character(i),".csv", sep=""),
           quote=FALSE,row.names=FALSE) # export a csv file with the data 
+
+# Copy and rename the ObsNod.out file with observation node outputs to the same folder as the VWC maps
+file.rename(from="ObsNod.out", 
+            to = paste("ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""))
+file.copy(paste("ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""),
+          to = out.path)
+file.remove(paste("ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""))
 
 }
