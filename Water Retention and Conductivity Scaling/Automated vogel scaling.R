@@ -108,20 +108,19 @@ df.par$tau<-rep(0.5,times=130)
 # df.par$tau[idx]<-0.5
 
 
-# Apply function Conductivity.R to determine conductivity curves -----------------
-source("C:\\Users\\Matt\\Documents\\Clustering ERT paper\\Paper 2 - Geometry and Structure\\Submission codes and data\\Conductivity.R")
+# Apply function "Ku" from package "Soil HyP" to determine conductivity curves -----------------
+require(SoilHyP)
+
+#modify data.frame to work with SoilHyP format
+par<-data.frame(df.par[,5:13])
+names(par)<-c("thr","ths","alfa","n","w2","alfa2","n2","Ks","tau")
+
 
 K<-list()
-#K10<-1
-#K30<-1
-#K100<-1
+
 
 for (i in 1:length(df.par$thrvGB)){
-  #K[[i]]<-Conductivity(df.par[i,c(3,4,12,13)],h.cm[[i]]) Unimodal
-  K[[i]]<-Conductivity(df.par[i,7:13],h.cm[[i]]) # Bimodal
-  #K10[i]<-K[[i]][which(h.cm[[i]]==10)]
-  #K30[i]<-K[[i]][which(h.cm[[i]]==30)]
-  #K100[i]<-K[[i]][which(h.cm[[i]]==100)]
+  K[[i]]<-Ku(h.cm[[i]],FUN.shp="vGM",par.shp=par[i,],modality="bi",suc.negativ=FALSE)
 }
 
 
@@ -133,6 +132,27 @@ source(paste(path,"\\vscale.R",sep=""))
 
 
 scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,c(df.par$thsvGB),c(df.par$thrvGB))
+
+# Fit the scaled water retention and hydraulic conductivity with SoilHyP (WARNING! THIS TAKES A LONG TIME)
+
+
+ans <- fitSHP(obs = list(th = unlist(scaled$theta.sc), K = unlist(scaled$K.sc)),
+              suc = list(th = unlist(scaled$h.sc)+1, K = unlist(scaled$h.sc)+1),
+              FUN.shp = 'vg',
+              modality = 'bi',
+              par.shp = NULL,
+              fit = 'both',
+              weighting = 'var',
+              log = c('alfa', 'n', 'ks','alfa2','n2'),
+              control = list(ncomplex = 15, reltol = 1e-07,tolsteps = 7),
+              suc.negativ = FALSE,
+              integral = FALSE,
+              log_Ku=TRUE
+)
+ans$par
+
+# get model prediction lines for the scaled data to add to later plots
+model.lines<-predict(ans,suc=seq(from=1,to=1000000,by=10),suc.negativ=FALSE)
 
 
 # Create animated figure of scaling process ---------------------------------------------- 
