@@ -15,14 +15,12 @@ load(paste(path,"/SKUVarioNSmaintained.RData", sep=""))
 
 # NS not maintained
 
-load(paste(path,"/SKUVarioNSnotmaintained.RData", sep=""))
+load(paste(path,"/SKUVarioNSnotmaintained20percent.RData", sep=""))
 
 
 
 ## LOAD IN THE DATA IF ENVIRONMENT DATA IS NOT AVAILABLE (or if needed) --------------
  
-
-
 path<-("C:\\Users\\Matt\\Documents\\Norway\\SGeMS files")
 
 # Scaling factors
@@ -241,17 +239,16 @@ rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 va
 
 n=1000 # 1000 realizations 
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
-
 # fit the original variogram data with the model with lowest SSE 
-vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vth.orig=variogram(sfth~1,df, width=13, cutoff=70) #cutoff = distance where np first decreases
 vth.orig.fit<-list()
 mods<-c("Nug","Lin","Sph","Exp","Gau")
 SSE.orig<-matrix(nrow=length(mods), ncol=2)
 for (i in 1:length(mods)){
   if (mods[i]=="Nug"){
-vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.06,mods[i],range=0, nugget=0.10),fit.ranges=FALSE)
+vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.05,mods[i],range=0, nugget=0.02),fit.ranges=FALSE)
   }else{
-    vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.06,mods[i],range=45, nugget=0.10),fit.ranges=FALSE)
+    vth.orig.fit[[i]]<-fit.variogram(vth.orig,vgm(psill=0.05,mods[i],range=50, nugget=0.02),fit.ranges=FALSE)
   }
   SSE.orig[i,1]<-attr(vth.orig.fit[[i]],"SSE")
   SSE.orig[i,2]<-levels(vth.orig.fit[[i]]$model)[vth.orig.fit[[i]]$model[2]]
@@ -261,7 +258,7 @@ best.fit.th<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
 fit.id.th<-which.min(SSE.orig[,1])
 print(best.fit.th)
 
-origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id.th]],maxdist=60,n=100) # create a line of the variogram model for plotting
+origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id.th]],maxdist=70,n=100) # create a line of the variogram model for plotting
 
 
 # Extract the variogram model parameters from the original fit
@@ -283,7 +280,7 @@ ns.rand<-data.frame()
 for (i in 1:n){
   rand.nug[i,]<-orig.nug*rand.err[i]
   vth.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id.th],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
-  vth.modlines[[i]]<-variogramLine(vth.rand[[i]],maxdist=60,n=100)
+  vth.modlines[[i]]<-variogramLine(vth.rand[[i]],maxdist=70,n=100)
   ns.rand[i,1]<-vth.rand[[i]]$psill[1]/(vth.rand[[i]]$psill[2] + vth.rand[[i]]$psill[1])
 }
 
@@ -326,17 +323,16 @@ g1
 
 
 # SFH ---
-
-vh.orig=variogram(sfh~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
+vh.orig=variogram(sfh~1,df,width=13, cutoff=70) #cutoff = distance where np first decreases
 vh.orig.fit<-list()
 mods<-c("Nug","Lin","Sph","Exp","Gau")
 SSE.orig<-matrix(nrow=length(mods), ncol=2)
 
 for (i in 1:length(mods)){
   if (mods[i]=="Nug"){
-    vh.orig.fit[[i]]<-fit.variogram(vh.orig,vgm(psill=0.12,mods[i],range=0, nugget=0.08))
+    vh.orig.fit[[i]]<-fit.variogram(vh.orig,vgm(psill=0.05,mods[i],range=0, nugget=0.15))
   }else{
-    vh.orig.fit[[i]]<-fit.variogram(vh.orig,vgm(psill=0.12,mods[i],range=20, nugget=0.08))
+    vh.orig.fit[[i]]<-fit.variogram(vh.orig,vgm(psill=0.05,mods[i],range=20, nugget=0.15))
   }
   SSE.orig[i,1]<-attr(vh.orig.fit[[i]],"SSE")
   SSE.orig[i,2]<-levels(vh.orig.fit[[i]]$model)[vh.orig.fit[[i]]$model[2]]
@@ -346,7 +342,7 @@ best.fit.h<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
 fit.id.h<-which.min(SSE.orig[,1])
 print(best.fit.h)
 
-origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id.h]],maxdist=60,n=100) # create a line of the variogram model for plotting
+origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id.h]],maxdist=70,n=100) # create a line of the variogram model for plotting
 
 
 # Extract the variogram model parameters from the original fit
@@ -364,7 +360,7 @@ ns.rand<-data.frame()
 for (i in 1:n){
   rand.nug[i,]<-orig.nug*rand.err[i]
   vh.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id.h],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
-  vh.modlines[[i]]<-variogramLine(vh.rand[[i]],maxdist=60,n=100)
+  vh.modlines[[i]]<-variogramLine(vh.rand[[i]],maxdist=70,n=100)
   ns.rand[i,1]<-vh.rand[[i]]$psill[1]/(vh.rand[[i]]$psill[2] + vh.rand[[i]]$psill[1])
 }
 
@@ -411,7 +407,7 @@ ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=
 cwd<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control")
  path<-paste(cwd,"/Spatial Statistics", sep="")
  setwd(path)
- save.image(file="SKUVarioNSnotmaintained.RData")
+ save.image(file="SKUVarioNSnotmaintained20percent.RData")
 
 
 
@@ -579,7 +575,7 @@ save.image(file="SKUVarioNSmaintained.RData")
 
 # LOAD IN RESULTS THAT WERE ALREADY CALCULATED
 
-load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\myobjects")
+load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\krig maps")
 
 
 
@@ -703,73 +699,4 @@ gl.minmax<-data.frame(vth=c(min(sim.min.vth),max(sim.max.vth)),vh=c(min(sim.min.
 rownames(gl.minmax)<-c("global min","global max")
 
 save(list=c("est3D.vth","est3D.vh"),file="krig maps", compress="bzip2")
-
-
-require(lattice)
-require(cowplot)
-
-levelplot(var1.pred ~ x + y | z, as.data.frame(res3D),
-main=paste("Original data fitting", "mod=Gaus", ""))
-
-
-layout(matrix(c(1,2,3,4),2))
-
-hist(est3D.vth$var1.pred.1, main=paste("Realization", as.character(rand.id[1]),"SFTH"), 
-     xlab="Kriging prediction", 
-     col="gray")
-text(1.05,30000, paste("range =", as.character(round(min(est3D.vth$var1.pred.1),digits=3)), as.character(round(max(est3D.vth$var1.pred.1),digits=3))))
-hist(est3D.vth$var1.pred.2,main=paste("Realization", as.character(rand.id[2]),"SFTH"),
-     xlab="Kriging prediction",
-     col="gray")
-text(1.05,30000, paste("range =", as.character(round(min(est3D.vth$var1.pred.2),digits=3)), as.character(round(max(est3D.vth$var1.pred.2),digits=3))))
-hist(est3D.vth$var1.pred.3,main=paste("Realization", as.character(rand.id[3]),"SFTH"),
-     xlab="Kriging prediction",
-     col="gray")
-text(1.05,30000, paste("range =", as.character(round(min(est3D.vth$var1.pred.3),digits=3)), as.character(round(max(est3D.vth$var1.pred.3),digits=3))))
-hist(est3D.vth$var1.pred.4,main=paste("Realization", as.character(rand.id[4]),"SFTH"),
-     xlab="Kriging prediction",
-     col="gray")
-text(1.05,30000, paste("range =", as.character(round(min(est3D.vth$var1.pred.4),digits=3)), as.character(round(max(est3D.vth$var1.pred.4),digits=3))))
-
-
-
-layout(matrix(c(1,2,3,4),2))
-
-hist(est3D.vh$var1.pred.1, main=paste("Realization", as.character(rand.id[1]),"SFH"), 
-     xlab="Kriging prediction", 
-     col="gray")
-text(1.75,50000, paste("range =", as.character(round(min(est3D.vh$var1.pred.1),digits=3)), as.character(round(max(est3D.vh$var1.pred.1),digits=3))))
-hist(est3D.vh$var1.pred.2,main=paste("Realization", as.character(rand.id[2]),"SFH"),
-     xlab="Kriging prediction",
-     col="gray")
-text(1.75,50000, paste("range =", as.character(round(min(est3D.vh$var1.pred.2),digits=3)), as.character(round(max(est3D.vh$var1.pred.2),digits=3))))
-hist(est3D.vh$var1.pred.3,main=paste("Realization", as.character(rand.id[3]),"SFH"),
-     xlab="Kriging prediction",
-     col="gray")
-text(1.75,50000, paste("range =", as.character(round(min(est3D.vh$var1.pred.3),digits=3)), as.character(round(max(est3D.vh$var1.pred.3),digits=3))))
-hist(est3D.vh$var1.pred.4,main=paste("Realization", as.character(rand.id[4]),"SFH"),
-     xlab="Kriging prediction",
-     col="gray")
-text(1.75,50000, paste("range =", as.character(round(min(est3D.vh$var1.pred.4),digits=3)), as.character(round(max(est3D.vh$var1.pred.4),digits=3))))
-
-
-
-
-
-# Clay content
-clay<-data.frame(read.table(paste(path,"\\clay content points.dat", sep=""), sep="", skip=6))
-
-names(clay)<-c("x","y","z","cl")
-coordinates(clay) = ~x+y+z
-
-
-vc=variogram(cl~1,clay, width=13, cutoff=60)
-plot(vc)
-
-vc.fit<-fit.variogram(vc,vgm(psill=15,"Sph",range=25, nugget=18))
-plot(vc,vc.fit)
-
-vc.fit
-
-
 

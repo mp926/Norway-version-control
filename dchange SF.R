@@ -22,10 +22,10 @@ coords<-as.data.frame(readMat("C:\\Users\\Matt\\Documents\\Norway\\HYDRUS and Pa
 # Read in the file where the scaling factors are recorded and parse the ASCII file
 # Axz = SFH, Dxz = SFTH
 
-head<-readLines("DOMAIN2.DAT")
+head<-readLines("DOMAIN.DAT")
 head<-data.frame(newcol=head[1:5])
-SFdom<-read.table("DOMAIN2.DAT", skip=5, header=FALSE, fill=TRUE, nrows=52621) # Pull out the top portion of the file with the scaling factors
-DOM<-read.table("DOMAIN2.DAT", skip=52626, header=FALSE, fill=TRUE, nrows=Inf) # Extract the rest of the file
+SFdom<-read.table("DOMAIN.DAT", skip=5, header=FALSE, fill=TRUE, nrows=52621,stringsAsFactors=FALSE) # Pull out the top portion of the file with the scaling factors
+DOM<-read.table("DOMAIN.DAT", skip=52626, header=FALSE, fill=TRUE, nrows=Inf,stringsAsFactors=FALSE) # Extract the rest of the file
 
 pred<-seq(from=4,to=250,by=5) # The kringing prediction output is at every 5th column
 
@@ -43,7 +43,7 @@ for (j in 1:ncol(Axz)){
 library(tidyr) # needed for the "unite" function
 
 
-nstep<-22 # number of time steps with outputs of water content (SELECTOR.IN file. 
+nstep<-6 # number of time steps with outputs of water content (SELECTOR.IN file. 
           # t=0 is not shown in the file, so make nstep = # of timesteps in file + 1)
 
 th.mapn<-matrix(nrow=nrow(d.idx),ncol=nstep)
@@ -56,14 +56,14 @@ for(i in 1:ncol(Axz)){
 
 th.map<-NA
   
-SFdom$Axz[1:nrow(Axz)]<-round(Axz[,i], digits=5) # Add the scaling factors to the data.frame to be written to text
-SFdom$Dxz[1:nrow(Dxz)]<-round(Dxz[,i], digits=5)
+SFdom[2:(nrow(Axz)+1),7]<-round(Axz[,i], digits=5) # Add the scaling factors to the data.frame to be written to text
+SFdom[2:(nrow(Dxz)+1),9]<-round(Dxz[,i], digits=5)
 
-SFdom<-unite(SFdom,newcol,sep=" ",remove=TRUE) #Reshape the data back to its original format
+NewDom<-unite(SFdom,newcol,sep=" ",remove=TRUE) #Reshape the data back to its original format
 DOM<-unite(DOM,newcol,sep=" ", remove=TRUE) 
-SFdom <- rbind(head,SFdom,DOM) # Put all sections together
+NewDom <- rbind(head,NewDom,DOM) # Put all sections together
 
-write.table(SFdom,file="DOMAIN.DAT",append=FALSE, na=" ", col.names=FALSE, quote=FALSE, row.names=FALSE, sep="   ") #Write to text file DOMAIN.DAT
+write.table(NewDom,file="DOMAIN.DAT",append=FALSE, na=" ", col.names=FALSE, quote=FALSE, row.names=FALSE, sep="   ") #Write to text file DOMAIN.DAT
 
 system2("h3d_calc.exe") #Run the HYDRUS solver executable file
 
@@ -83,10 +83,9 @@ write.csv(th.mapn,
           quote=FALSE,row.names=FALSE) # export a csv file with the data 
 
 # Copy and rename the ObsNod.out file with observation node outputs to the same folder as the VWC maps
-file.rename(from="ObsNod.out", 
-            to = paste("ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""))
-file.copy(paste("ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""),
-          to = out.path)
-file.remove(paste("ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""))
+file.copy("ObsNod.out",to = out.path)
+file.rename(from=paste(out.path,"ObsNod.out", sep=""), 
+            to = paste(out.path,"ObsNod ",as.character(nstep)," timesteps kriging map ",as.character(i),".out", sep=""))
+
 
 }

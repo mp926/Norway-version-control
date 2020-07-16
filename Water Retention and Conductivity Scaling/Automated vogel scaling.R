@@ -133,7 +133,7 @@ source(paste(path,"\\vscale.R",sep=""))
 
 scaled<-Vogel.scale(h.cm,theta.v,K,df.par$Ks,c(df.par$thsvGB),c(df.par$thrvGB))
 
-# Fit the scaled water retention and hydraulic conductivity with SoilHyP (WARNING! THIS TAKES A LONG TIME)
+# Fit the scaled water retention and hydraulic conductivity with SoilHyP (WARNING! THIS TAKES ABOUT 30 MIN. CHECK THE SAVED FILE)
 
 
 ans <- fitSHP(obs = list(th = unlist(scaled$theta.sc), K = unlist(scaled$K.sc)),
@@ -149,10 +149,20 @@ ans <- fitSHP(obs = list(th = unlist(scaled$theta.sc), K = unlist(scaled$K.sc)),
               integral = FALSE,
               log_Ku=TRUE
 )
-ans$par
+ref.par<-data.frame(ans$par)
+
+# Save model parameters to file
+
+path<-("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Water Retention and Conductivity Scaling")
+write.table(round(ref.par,digits=3),
+            file=paste(path,"\\Reference curve parameters bimodal K and WRC.txt", sep=""),
+            append=FALSE,quote=FALSE,col.names=TRUE,row.names=FALSE)
 
 # get model prediction lines for the scaled data to add to later plots
-model.lines<-predict(ans,suc=seq(from=1,to=1000000,by=10),suc.negativ=FALSE)
+model.lines<-predict(ans,suc=10^seq(0,6.5,by=0.25),suc.negativ=FALSE)
+
+
+
 
 
 # Create animated figure of scaling process ---------------------------------------------- 
@@ -198,7 +208,7 @@ image_write(m, "VSCALE.gif")
 
 
 
-# Create static figures for the manuscript
+# Create static figures for the manuscript -----------------------------
 
 
 
@@ -234,6 +244,7 @@ g1<-ggplot()+
 
 g2<-ggplot()+
   geom_point(aes(x=log10(unlist(scaled[[2]])),y=unlist(scaled[[3]])),pch=21) +
+  geom_line(aes(x=log10(-model.lines$suc),y=model.lines$SWC),color="red",lwd=1.3)+
   xlab("Scaled Pressure potential (pF)")+
   ylab(expression('Scaled Volumetric water content' ~ ' ' ~ (cm^3 * cm^-3))) +
   theme_bw() + theme(axis.text=element_text(size=14),axis.title=element_text(size=12))
@@ -266,6 +277,7 @@ g3<-ggplot()+
 
 g4<-ggplot()+
   geom_point(aes(x=log10(unlist(scaled[[2]])),y=log10(unlist(scaled[[4]]))),pch=21)+
+  geom_line(aes(x=log10(-model.lines$suc),y=log10(model.lines$Ku)),color="red",lwd=1.3)+
       xlab("Scaled Pressure potential (pF)")+
       ylab("Scaled Hydraulic conductivity (log10 cm/d)")+
       theme_bw() + theme(axis.text=element_text(size=14),axis.title=element_text(size=12))
@@ -371,7 +383,7 @@ fig %>% layout(annotations = list(
 
 
 
-# reference curve parameters and model line
+# reference curve parameters and model line ------------------------
 ref.curve<-c(0.0016,0.4034,0.0309,2.5058,0.9319,5.5595e-4,1.4701) #thr ths alpha1 n1 w2 alpha2 n2
 # Determine the number of random samples that will be drawn from the resulting output (to conserve memory)
 r.samp<-sample(1:dim(top.coords)[1],200,replace=FALSE)
