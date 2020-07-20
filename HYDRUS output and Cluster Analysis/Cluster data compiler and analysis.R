@@ -150,3 +150,78 @@ for(j in 1:5){
 
 
 
+
+## Volume Analysis ---------------------------
+
+setwd("C:\\Users\\Matt\\Documents\\Norway\\Ruth clusters\\2016 experiment")
+# import volume data 
+library(readxl)
+
+df.vol<-read_excel("Cluster volumes.xlsx",col_names=TRUE)
+
+df.mean<-df.vol[grep("mean",df.vol$label),] #extract mean data for later use
+
+df.vol<-df.vol[-grep("mean",df.vol$label),] #remove the mean data from the main data.frame to make calculations easier 
+
+strings<-c("t1","t2","t3","t4","t5")
+idx<-list()
+t.list<-list() #list of data broken up by time step
+m.vol<-data.frame(HH=rep(NA,times=5),LL=rep(NA,times=5),NS=rep(NA,times=5),
+                  row.names=c("0 days","3.33 days","144 days","147 days","150 days"))
+sd.vol<-data.frame(HH=rep(NA,times=5),LL=rep(NA,times=5),NS=rep(NA,times=5),
+                   row.names=c("0 days","3.33 days","144 days","147 days","150 days"))
+
+for(i in 1:5){
+idx[[i]]<-grep(strings[i],df.vol$label)
+t.list[[i]]<-as.data.frame(df.vol[idx[[i]],])
+m.vol[i,]<-apply(t.list[[i]][,2:4],2,mean)
+sd.vol[i,]<-apply(t.list[[i]][,2:4],2,sd)
+}
+
+
+# plot the difference between resistivity cluster and VWC cluster per timestep
+
+library(ggplot2)
+library(cowplot)
+
+df.plot<-data.frame(data=c(m.vol$HH/max(m.vol$HH),m.vol$LL/max(m.vol$LL),m.vol$NS/max(m.vol$NS)),
+                    labels=c(rep("HH",times=5),rep("LL",times=5),rep("NS",times=5)),
+                    time=rep(c("1","2","3","4","5"),times=3))
+
+
+
+
+df.plot2<-data.frame(sq.err=c(((m.vol$HH-df.vol$LL[1])^2),((m.vol$LL-df.vol$HH[1])^2),
+                             ((m.vol$NS-df.vol$NS[1])^2)),labels=c(rep("VWC HH- ERT LL",times=5),
+                                                                   rep("VWC LL-ERT HH",times=5),
+                                                                   rep("VWC NS-ERT NS",times=5)),
+                     time=rep(c("1","2","3","4","5"),times=3))
+
+
+g<-ggplot(df.plot) +
+  geom_line(aes(x=rep(c(1,2,3,4,5),times=3),y=data),lwd=1.3)+
+  scale_x_discrete(limits=c("1","2","3","4","5"),
+                   labels=c("0","3.33","144","147","150"))+
+  facet_wrap(~labels)+
+  xlab("Days")+
+  ylab(expression(paste("Normalized mean volume","  ",(m^3))))+
+  theme_bw()+theme(axis.text=element_text(size=15),axis.title=element_text(size=15),
+                   strip.text=element_text(size=15),axis.title.x=element_blank(),
+                   axis.text.x = element_blank(),axis.ticks.x = element_blank())
+
+
+
+g2<-ggplot(df.plot2) +
+  geom_line(aes(x=rep(c(1,2,3,4,5),times=3),y=sq.err),lwd=1.3)+
+  scale_x_discrete(limits=c("1","2","3","4","5"),
+                   labels=c("0","3.33","144","147","150"))+
+  facet_wrap(~labels)+
+  xlab("Days")+
+  ylab(expression(paste("Sq. error"," ",(m^3))))+
+  theme_bw()+theme(axis.text=element_text(size=15),axis.title=element_text(size=15),
+                   strip.text=element_text(size=15))
+
+
+plot_grid(g,g2,nrow=2,labels=c("A.","B."))
+
+
