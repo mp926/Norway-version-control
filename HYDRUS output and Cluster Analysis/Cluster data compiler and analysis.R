@@ -98,8 +98,8 @@ save(cluster.map,file="Quantile cluster data.RData")
 
 setwd("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\HYDRUS output and Cluster Analysis")
 
-load("50 realizations clustered.Rdata")
-
+load("Mean cluster data.Rdata")
+#load("50 realizations clustered.Rdata")
 
 HH.idx<-sapply(cluster.map,function(y) which(y==4)) # apply function "which" to list 
 LL.idx<-sapply(cluster.map,function(y) which(y==1))
@@ -113,7 +113,7 @@ cluster.map[[i]][NS.idx[[i]]]<-3
 
 }
 
-# WRITE THE HYDRUS IMPORT FILES -----------------------------
+## WRITE THE HYDRUS IMPORT FILES -----------------------------
 
 library(tidyr)
 
@@ -123,17 +123,29 @@ coords<-read.table("coords.txt",header=TRUE)
 nrow=38519
 days<-c(0,3.33,144,147,150)
 
-# Edit the IISV_import.txt file with the needed lines from cluster.map
+head<-"OBJECT=INDEXES_AT_POINTS"
 imp<-read.table("IISV_import.txt",skip=1,nrow=38519)
+tail<-";"
 
 for(j in 1:5){
-  for(i in 1:50){
-    imp[,4]<-cluster.map[[j]][,i] 
+  if(is.null(ncol(cluster.map[[1]]))==TRUE){
+    imp[,4]<-cluster.map[[j]] 
     
-    filename<-paste("VWC clusters",i,"_",days[j],"days",sep="")
-    write.table(imp,paste(filename,".txt",sep=""),quote=FALSE,row.names=FALSE,col.names=FALSE)
-  }
+    out<-rbind(head,imp,tail)
+    filename<-paste("VWC mean clusters_",days[j],"days",sep="")
+    write.table(out,paste(filename,".txt",sep=""),quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }else{
+    for(i in 1:ncol(cluster.map[[1]])){
+      imp[,4]<-cluster.map[[j]][,i] 
+      
+      out<-rbind(head,imp,tail)
+      filename<-paste("VWC clusters",i,"_",days[j],"days",sep="")
+      write.table(out,paste(filename,".txt",sep=""),quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+    
+    
 }
+    }
 
 
 
