@@ -61,7 +61,7 @@ align.time.down = function(x,n){ index(x) = index(x)-n; align.time(x,n) }
 vwc.cal.day <- align.time.down(means, 60*60)    
 
 
-# find difference between laboratory and field measured th_s to scale the modeled data. 
+# find difference between laboratory and field measured th_s to scale the modeled data ----------- 
 
 require(R.matlab)
 
@@ -100,6 +100,37 @@ for(i in 1:20){
 }
 
 vwc.sc<-as.data.frame(vwc.sc)
+
+
+# Correlation in porosities between field and TDR-measured
+# for BD of lower cores, average the two 90 cm cores, and use for all deep cores
+deep.bd<-mean(c(1.60,1.51))
+corr.por<-data.frame(lab=lths.meas$porosity,field=fths.meas,sensor=seq(1,20,1),
+                     depth=c(10,40,60,92,25,33,93,67,132,25,45,58,
+                             90,25,45,58,95,94,10,10),
+                     depth.ind=c(1,3,3,4,1,2,4,3,5,1,3,3,4,1,3,3,4,4,1,1),
+                     BD=c(1.32,1.65,1.69,deep.bd,1.37,1.33,1.51,1.52,deep.bd,
+                     1.47,1.64,1.67,deep.bd,1.22,1.67,1.69,1.60,deep.bd,1.34,1.30))
+
+require(ggplot2)
+
+g<-ggplot(data=corr.por, aes(x=lab, y=field, group=depth)) +
+  geom_point(aes(color=BD, shape=factor(depth.ind)), size=4)+
+  geom_abline(slope=1,intercept=0, lwd=1.2)+
+  xlim(0,100)+
+  ylim(0,100)+
+  xlab("Laboratory measured porosity (%)") +
+  ylab("Field (TDR) measured porosity (%)")
+
+g + scale_shape_discrete(name  ="Depth (-cm)",
+                         breaks=c(1,2,3,4,5),
+                         labels=c("10-25","25-40","40-70","70-95","95+"),
+                         solid=TRUE) + 
+  scale_colour_gradient(name = "Bulk Density (g/cc)",
+                        low = "grey", high = "black") +
+  theme_bw() + theme(axis.title=element_text(size=14), axis.text=element_text(size=12),
+                     legend.title=element_text(size=12),legend.text=element_text(size=12))
+
 
 # Pressure potential 
 
@@ -231,7 +262,7 @@ for(i in 1:20){
           geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i+20]),color="red") +
           geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
                           ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
-          geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
+          #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
           xlab("Time") +
           ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i]),sep=" ")))
 
@@ -242,17 +273,88 @@ for(i in 1:20){
   
   print(ggplot() +
          geom_point(data=m.model,aes(x=as.numeric(vwc.day[,i])/100, y=m.model[,i+20]/100)) +
-         geom_point(aes(x=(vwc.cal.day[,i]/100),y=(m.model[,i+20])/100),color="blue")+
-         geom_point(aes(x=(as.numeric(vwc.day[,i])/100), y=vwc.sc[,i]/100),color="red")+ #red is the model output - the difference between the laboratory and field-measured saturated water content values
+         #geom_point(aes(x=(vwc.cal.day[,i]/100),y=(m.model[,i+20])/100),color="blue")+ # density-calibrated TDR
+         #geom_point(aes(x=(as.numeric(vwc.day[,i])/100), y=vwc.sc[,i]/100),color="red")+ #red is the model output - the difference between the laboratory and field-measured saturated water content values
          geom_abline(slope=1,intercept=0)+
          xlim(0.25,0.5)+
          ylim(0.25,0.5)+
-         xlab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i]),sep=" ")) +
+         xlab(paste("Measured volumetric Water Content","sensor",as.character(sens.idx[i]),sep=" ")) +
          ylab(paste("Modeled Volumetric Water Content","sensor",as.character(sens.idx[i],sep=""))))
   
    
 }
 
+# isolate some plots to show the effect of magnitude mismatch between measured and modeled VWC 
+require(cowplot)
+
+i=c(18,19,15)
+
+p1<-ggplot()+
+  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[1]])))+
+  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[1]+20]),color="red") +
+  #geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
+  #                ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
+  #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
+  xlab("Time") +
+  ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i[1]]),sep=" ")) +
+  theme_bw()
+
+p2<-ggplot()+
+    geom_point(data=m.model,aes(x=as.numeric(vwc.day[,i[1]])/100, y=m.model[,i[1]+20]/100)) +
+    #geom_point(aes(x=(vwc.cal.day[,i]/100),y=(m.model[,i+20])/100),color="blue")+ # density-calibrated TDR
+    #geom_point(aes(x=(as.numeric(vwc.day[,i])/100), y=vwc.sc[,i]/100),color="red")+ #red is the model output - the difference between the laboratory and field-measured saturated water content values
+    geom_abline(slope=1,intercept=0)+
+    xlim(0.25,0.5)+
+    ylim(0.25,0.5)+
+    xlab("Measured Volumetric Water Content") +
+    ylab("Modeled Volumetric Water Content") +
+  theme_bw()
+
+p3<-ggplot()+
+  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[2]])))+
+  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[2]+20]),color="red") +
+  #geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
+  #                ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
+  #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
+  xlab("Time") +
+  ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i[2]]),sep=" ")) +
+  theme_bw()
+
+p4<-ggplot()+
+  geom_point(data=m.model,aes(x=as.numeric(vwc.day[,i[2]])/100, y=m.model[,i[2]+20]/100)) +
+  #geom_point(aes(x=(vwc.cal.day[,i]/100),y=(m.model[,i+20])/100),color="blue")+ # density-calibrated TDR
+  #geom_point(aes(x=(as.numeric(vwc.day[,i])/100), y=vwc.sc[,i]/100),color="red")+ #red is the model output - the difference between the laboratory and field-measured saturated water content values
+  geom_abline(slope=1,intercept=0)+
+  xlim(0.25,0.5)+
+  ylim(0.25,0.5)+
+  xlab("Measured Volumetric Water Content") +
+  ylab("Modeled Volumetric Water Content") +
+  theme_bw()
+
+p5<-ggplot()+
+  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[3]])))+
+  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[3]+20]),color="red") +
+  #geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
+  #                ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
+  #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
+  xlab("Time") +
+  ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i[3]]),sep=" ")) +
+  theme_bw()
+
+p6<-ggplot()+
+  geom_point(data=m.model,aes(x=as.numeric(vwc.day[,i[3]])/100, y=m.model[,i[3]+20]/100)) +
+  #geom_point(aes(x=(vwc.cal.day[,i]/100),y=(m.model[,i+20])/100),color="blue")+ # density-calibrated TDR
+  #geom_point(aes(x=(as.numeric(vwc.day[,i])/100), y=vwc.sc[,i]/100),color="red")+ #red is the model output - the difference between the laboratory and field-measured saturated water content values
+  geom_abline(slope=1,intercept=0)+
+  xlim(0.25,0.5)+
+  ylim(0.25,0.5)+
+  xlab("Measured Volumetric Water Content") +
+  ylab("Modeled Volumetric Water Content") +
+  theme_bw()
+
+plot_grid(p3,p4,p5,p6,p1,p2,ncol=2,
+          labels=c("10 cm depth","","45 cm depth","", "94 cm depth"),
+          label_size=12)
 
 
 ################ Drying behavior
