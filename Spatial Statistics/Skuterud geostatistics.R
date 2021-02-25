@@ -240,7 +240,7 @@ rand.id<-sample(seq(1,1000,1),50,replace=FALSE) #Take a random sampling of 50 va
 n=1000 # 1000 realizations 
 coordinates(df)<- ~x+y+z  # This transforms the data.frame. If you want to use df again, you must reload the data.frame into the environment
 # fit the original variogram data with the model with lowest SSE 
-vth.orig=variogram(sfth~1,df, width=13, cutoff=70) #cutoff = distance where np first decreases
+vth.orig=variogram(sfth~1,df, width=13, cutoff=60) #cutoff = distance where np first decreases
 vth.orig.fit<-list()
 mods<-c("Nug","Lin","Sph","Exp","Gau")
 SSE.orig<-matrix(nrow=length(mods), ncol=2)
@@ -258,7 +258,7 @@ best.fit.th<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
 fit.id.th<-which.min(SSE.orig[,1])
 print(best.fit.th)
 
-origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id.th]],maxdist=70,n=100) # create a line of the variogram model for plotting
+origmodel.lines.th<-variogramLine(vth.orig.fit[[fit.id.th]],maxdist=60,n=100) # create a line of the variogram model for plotting
 
 
 # Extract the variogram model parameters from the original fit
@@ -280,7 +280,7 @@ ns.rand<-data.frame()
 for (i in 1:n){
   rand.nug[i,]<-orig.nug*rand.err[i]
   vth.rand[[i]]<-vgm(psill=orig.sill-rand.nug[i,],mods[fit.id.th],range=orig.rng,nugget=rand.nug[i,]) #total sill must be equal to original
-  vth.modlines[[i]]<-variogramLine(vth.rand[[i]],maxdist=70,n=100)
+  vth.modlines[[i]]<-variogramLine(vth.rand[[i]],maxdist=60,n=100)
   ns.rand[i,1]<-vth.rand[[i]]$psill[1]/(vth.rand[[i]]$psill[2] + vth.rand[[i]]$psill[1])
 }
 
@@ -308,12 +308,12 @@ for (i in 1:length(rand.id)) {
 dfmodrand<-rbindlist(modlist) 
 
 g1<-ggplot(vth.orig,aes(x=dist,y=gamma)) +  # plot the variograms
-  geom_point() +
-  geom_line(origmodel.lines.th, mapping=aes(x=dist,y=gamma), color="black", lwd=1.5) +
+  geom_line(origmodel.lines.th, mapping=aes(x=dist,y=gamma), color="black", lwd=1) +
   geom_line(dfmodrand,mapping=aes(x=dist,y=gamma,color=samp)) +
-  xlab("Distance (cm)") +
+  geom_point() +
+  xlab("Lag distance (cm)") +
   ylab(expression(gamma)) +
-  ggtitle("Random nugget SFth") +
+  ylim(0,0.028)+
   theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
                      legend.position="")
 
@@ -323,7 +323,7 @@ g1
 
 
 # SFH ---
-vh.orig=variogram(sfh~1,df,width=13, cutoff=70) #cutoff = distance where np first decreases
+vh.orig=variogram(sfh~1,df,width=13, cutoff=60) #cutoff = distance where np first decreases
 vh.orig.fit<-list()
 mods<-c("Nug","Lin","Sph","Exp","Gau")
 SSE.orig<-matrix(nrow=length(mods), ncol=2)
@@ -342,7 +342,7 @@ best.fit.h<-c(min(SSE.orig[,1]),SSE.orig[which.min(SSE.orig[,1]),2])
 fit.id.h<-which.min(SSE.orig[,1])
 print(best.fit.h)
 
-origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id.h]],maxdist=70,n=100) # create a line of the variogram model for plotting
+origmodel.lines.h<-variogramLine(vh.orig.fit[[fit.id.h]],maxdist=60,n=100) # create a line of the variogram model for plotting
 
 
 # Extract the variogram model parameters from the original fit
@@ -383,12 +383,12 @@ for (i in 1:length(rand.id)) {
 dfmodrand<-rbindlist(modlist) 
 
 g2<-ggplot(vh.orig,aes(x=dist,y=gamma)) +  # plot the variograms
-  geom_point() +
   geom_line(origmodel.lines.h, mapping=aes(x=dist,y=gamma), color="black", lwd=1.5) +
   geom_line(dfmodrand,mapping=aes(x=dist,y=gamma,color=samp)) +
-  xlab("Distance (cm)") +
+  geom_point() +
+  xlab("Lag distance (cm)") +
   ylab(expression(gamma)) +
-  ggtitle("Random nugget SFh") +
+  ylim(0,0.25)+
   theme_bw() + theme(axis.text=element_text(size=14), axis.title=element_text(size=14),
                      legend.position="")
 
@@ -399,7 +399,7 @@ g2
 
 require(ggpubr)
 
-ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=c("A","B"), ncol=2, nrow=1)
+ggarrange(g1 + theme(legend.position=""),g2 + theme(legend.position=""), labels=c("a.","b."), ncol=2, nrow=1)
 
 
 # save the global environment so that you have access to all randomized components
@@ -577,8 +577,20 @@ save.image(file="SKUVarioNSmaintained.RData")
 
 load("C:\\Users\\Matt\\Documents\\Norway\\Norway-version-control\\Spatial Statistics\\krig maps")
 
+#Save scaling factors to seprate file (if needed)
 
+SFH<-est3D.vh[,c(seq(from=4,to=250,by=5))]
+SFTH<-est3Dvth[,c(seq(from=4,to=250,by=5))]
 
+# find mean and sd values to save space
+m.SFH<-apply(SFH,1,mean)
+m.SFTH<-apply(SFTH,1,mean)
+
+sd.SFH<-apply(SFH,1,sd)
+sd.SFTH<-apply(SFTH,1,sd)
+
+write.table(m.SFH,"Krig mean scaling factor pressure.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+write.table(m.SFTH,"Krig mean scaling factor water content.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
 # IF YOU WANT TO START FROM THE BEGINNING
 

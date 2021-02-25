@@ -60,6 +60,24 @@ means <- period.apply(df.xts.cal, endpoints(df.xts.cal, "days"), mean)
 align.time.down = function(x,n){ index(x) = index(x)-n; align.time(x,n) }
 vwc.cal.day <- align.time.down(means, 60*60)    
 
+# get the time series 
+
+df.evap<-read_excel("C:\\Users\\Matt\\Documents\\Norway\\Field experiment\\Weather data\\MET complete dataset\\Skuterud evaporation calculations.xlsx",
+                    sheet="ET (fixed)", col_names=TRUE)
+
+df.xts.atmo <- xts(df.evap[,c(4,5,16)], as.POSIXct(df.evap$Date),
+                   format="%d/%m/%Y %H:%M")
+
+means <- period.apply(df.xts.atmo, endpoints(df.xts.atmo, "days"), mean) # DAILY AVERAGE
+
+align.time.down = function(x,n){ index(x) = index(x)-n; align.time(x,n) }
+atmo.day <- align.time.down(means, 60*60)    
+
+atmo.day<-atmo.day*24 # Convert to cm/d
+
+
+
+
 
 # find difference between laboratory and field measured th_s to scale the modeled data ----------- 
 
@@ -119,8 +137,8 @@ g<-ggplot(data=corr.por, aes(x=lab, y=field, group=depth)) +
   geom_abline(slope=1,intercept=0, lwd=1.2)+
   xlim(0,100)+
   ylim(0,100)+
-  xlab("Laboratory measured porosity (%)") +
-  ylab("Field (TDR) measured porosity (%)")
+  xlab(expression("Laboratory measured" ~ theta[s] ~ "(%)")) +
+  ylab(expression("Field (TDR) measured" ~ theta[s] ~ "(%)"))
 
 g + scale_shape_discrete(name  ="Depth (-cm)",
                          breaks=c(1,2,3,4,5),
@@ -290,13 +308,14 @@ require(cowplot)
 i=c(18,19,15)
 
 p1<-ggplot()+
-  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[1]])))+
-  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[1]+20]),color="red") +
+  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[1]]/100)))+
+  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[1]+20]/100),color="red") +
   #geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
   #                ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
   #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
   xlab("Time") +
   ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i[1]]),sep=" ")) +
+  ylim(0.28,0.45)+
   theme_bw()
 
 p2<-ggplot()+
@@ -307,17 +326,18 @@ p2<-ggplot()+
     xlim(0.25,0.5)+
     ylim(0.25,0.5)+
     xlab("Measured Volumetric Water Content") +
-    ylab("Modeled Volumetric Water Content") +
+    ylab("Simualated Volumetric Water Content") +
   theme_bw()
 
 p3<-ggplot()+
-  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[2]])))+
-  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[2]+20]),color="red") +
+  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[2]]/100)))+
+  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[2]+20]/100),color="red") +
   #geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
   #                ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
   #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
   xlab("Time") +
   ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i[2]]),sep=" ")) +
+  ylim(0.28,0.45)+
   theme_bw()
 
 p4<-ggplot()+
@@ -328,17 +348,18 @@ p4<-ggplot()+
   xlim(0.25,0.5)+
   ylim(0.25,0.5)+
   xlab("Measured Volumetric Water Content") +
-  ylab("Modeled Volumetric Water Content") +
+  ylab("Simulated Volumetric Water Content") +
   theme_bw()
 
 p5<-ggplot()+
-  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[3]])))+
-  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[3]+20]),color="red") +
+  geom_line(data=vwc.day, aes(x=index(vwc.day),y=as.numeric(vwc.day[,i[3]]/100)))+
+  geom_line(data=m.model,aes(x=index(atmo.day),y=m.model[,i[3]+20]/100),color="red") +
   #geom_ribbon(aes(x=index(atmo.day),ymin=as.numeric(m.model[,i+20])-sd.model[,i+20],
   #                ymax=as.numeric(m.model[,i+20])+sd.model[,i+20]),alpha=0.3) +
   #geom_line(data=vwc.cal.day, aes(x=index(vwc.cal.day),y=as.numeric(vwc.cal.day[,i])), col="blue")+
   xlab("Time") +
   ylab(paste("Volumetric Water Content","sensor",as.character(sens.idx[i[3]]),sep=" ")) +
+  ylim(0.28,0.45)+
   theme_bw()
 
 p6<-ggplot()+
@@ -349,12 +370,20 @@ p6<-ggplot()+
   xlim(0.25,0.5)+
   ylim(0.25,0.5)+
   xlab("Measured Volumetric Water Content") +
-  ylab("Modeled Volumetric Water Content") +
+  ylab("Simulated Volumetric Water Content") +
   theme_bw()
 
 plot_grid(p3,p4,p5,p6,p1,p2,ncol=2,
-          labels=c("10 cm depth","","45 cm depth","", "94 cm depth"),
-          label_size=12)
+          labels=c("10 cm depth below surface","","45 cm depth below surface","", "94 cm depth below surface"),
+          label_size=10, label_x=0.001, label_y=1.01, scale=0.9)
+
+
+# No correlation figures 
+
+plot_grid(p3,p5,p1,ncol=1,
+          labels=c("10 cm depth","45 cm depth", "94 cm depth"),
+          label_size=10, label_x=0.1, label_y=1.01, scale=0.9)
+
 
 
 ################ Drying behavior
