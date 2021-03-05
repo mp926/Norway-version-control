@@ -246,29 +246,201 @@ SSE.all[[i]]<-format(SSE.all[[i]],scientific=TRUE)
 
 
 
-# plot the comparison
-
+# Calculate the Kling-Gupta efficiency (KGE) and plot the comparison between measurements and simulations: Original simulations ----------------------------------------------------------
+library(hydroGOF)
 library(ggplot2)
+
+
+# Calculate KGE (Gupta et al. 2009)
+
+df.xts.simvwc<-list()
+for(i in 1:20){
+df.xts.simvwc[[i]] <- xts(m.model[,i+20], as.POSIXct(index(vwc.day)),
+                    format="%d/%m/%Y %H:%M:%S")
+}
+
+KGE.out<-list()
+
+for(i in 1:20){
+  
+KGE.out[[i]]<-KGE(sim=df.xts.simvwc[[i]],obs=vwc.day[,i],s=c(1,1,1), na.rm=TRUE, method="2012", out.type="single")
+
+}
+
+KGE.out<-KGE.out[-9] # remove sensor 9 since NA value was produced (there was no standard deviation in the simulated data)
+mean(unlist(KGE.out))  # mean value of KGE
+sd(unlist(KGE.out))
+
+
+## Calculate the Kling-Gupta efficiency (KGE) and plot the comparison between measurements and simulations: Simulations with parameter changes ----------------------------------------------------------
+
+library(hydroGOF)
+library(ggplot2)
+
+
+# load in simulated data with L changes
+
+
+path<-("C:\\Users\\Matt\\Documents\\Norway\\HYDRUS and ParaView files\\Norway 2016 Scaled IISV with plow pan and altered properties\\")
+subdir<-c("Scaled props all data L=0.5",
+          "Scaled props all data L=1",
+          "Scaled props all data L=-1",
+          "Scaled props all data L=-2",
+          "Scaled props all data L=3",
+          "Scaled props using only field data",
+          "Scaled props all data topsoil subsoil K6",
+          "Scaled props all data topsoil subsoil K6_lowered water table")
+filename<-"Obsnod.out"  
+mylist<-list()
+
+for (i in 1:length(subdir)){
+
+  mylist[[i]]<-read.delim(paste(path,subdir[i],"\\",filename,sep=""),header=TRUE, skip=4, sep="",stringsAsFactors=FALSE) 
+  mylist[[i]]$time<-as.numeric(mylist[[i]]$time)
+  
+  col.idx<-c(seq(2,61,3),seq(3,61,3))
+  mylist[[i]]<-data.frame(mylist[[i]][,1],mylist[[i]][,col.idx])
+  mylist[[i]]<-data.frame(mylist[[i]][2:144,])
+  
+  colnames<-c(paste("h",seq(1,20,1),sep=""),paste("theta",seq(1,20,1),sep=""))
+  
+  names(mylist[[i]])<-c("days",colnames) # Add names to data frame
+}
+
+names(mylist)<-c("L0.5","L1","L-1","L-2","L3","fieldref","K6","K6WT")
+
+for (i in 1:length(subdir)){
+  mylist[[i]][,22:41]<-mylist[[i]][,22:41]*100  # convert VWC to percent
+}
+
+  
+
+xts.simvwc<-vector(mode="list", length=length(subdir))
+
+for(i in 1:length(subdir)){
+  xts.simvwc[[i]]<-matrix(nrow=143,ncol=20)
+}
+
+for(i in 1:length(subdir)){
+  for(j in 2:21){
+  xts.simvwc[[i]][,j-1] <- mylist[[i]][,j+20]
+  xts.simvwc[[i]]<-xts(xts.simvwc[[i]], as.POSIXct(index(vwc.day)),
+        format="%d/%m/%Y %H:%M:%S")
+  }
+}
+
+names(xts.simvwc)<-names(mylist)
+
+
+KGE.out.adj<-vector(mode="list", length=length(subdir))
+for(i in 1:length(subdir)){
+  KGE.out.adj[[i]]<-matrix(nrow=1,ncol=20)
+}
+
+for(i in 1:length(subdir)){
+  for(j in 1:20){
+  KGE.out.adj[[i]][,j]<-KGE(sim=xts.simvwc[[i]][,j],obs=vwc.day[,j],s=c(1,1,1), na.rm=TRUE, method="2012", out.type="single")
+  }
+}
+
+KGE.out.adj<-data.frame(t(KGE.out.adj[[4]]),t(KGE.out.adj[[3]]),t(KGE.out.adj[[1]]),t(KGE.out.adj[[2]]), unlist(KGE.out),t(KGE.out.adj[[5]]),t(KGE.out.adj[[6]]),t(KGE.out.adj[[7]]),t(KGE.out.adj[[8]]))
+
+names(KGE.out.adj)<-c("L-2","L-1","L0.5","L1","L2.3","L3","fieldref","K6","K6WT")
+
+#KGE.out.adj$L2.3 <- unlist(KGE.out)# add in KGE for the initial simulations (L=2.312)
+
+KGE.out.adj<-KGE.out.adj[-9,] # remove sensor 9 (sd = 0, so KGE = NA)
+
+apply(KGE.out.adj,2,mean)
+apply(KGE.out.adj,2,sd)
+
+
+# plot KGE values as a function of adjustment
+
+
+
+
+# Plot simulated v. measured pressure potential and water content time series -------------------
+
+
 
 
 # Pressure potential
 
-for(i in 1:20){
 
-  print(ggplot()+
-  geom_line(data=press.day, aes(x=0:142,y=as.numeric(press.day[,i])))+
-  geom_line(data=m.model,aes(x=data[[1]]$days,y=m.model[,sens.idx[i]]),color="red") +
-  geom_ribbon(aes(x=data[[1]]$days,ymin=as.numeric(m.model[,sens.idx[i]])-sd.model[,sens.idx[i]],
-                                ymax=as.numeric(m.model[,sens.idx[i]])+sd.model[,sens.idx[i]]))+  
-  xlab("Time") +
-  ylab(paste("Pressure potential (hPa)","sensor",as.character(sens.idx[i]),sep=" ")))
- 
-  #print(ggplot() +
-   #       geom_point(data=m.model,aes_string(x=as.numeric(press.day[,i]), y=paste("sensor.h",as.character(sens.idx[i]),sep=""))) +
-   #       xlab(paste("Pressure potential (hPa)","sensor",as.character(sens.idx[i]),sep=" ")) +
-   #       ylab(paste("modeled pressure potential","sensor",as.character(sens.idx[i],sep=""))))
-   
+# plot as time series
+
+glist<-list()
+
+for (i in 1:20) {
+  message(i)
+  glist[[i]] <- local({
+    i <- i
+    p1 <- ggplot()+
+      geom_line(data=press.day, aes(x=0:142,y=as.numeric(press.day[,i]), color="Measured"), lwd=1.3)+
+      geom_line(data=m.model,aes(x=data[[1]]$days,y=m.model[,i], color="L=2.3")) +
+      geom_line(data=mylist$`L-2`, aes(x=days, y=mylist$`L-2`[,i+1], color="L=-2"))+
+      geom_line(data=mylist$`L-1`, aes(x=days, y=mylist$`L-1`[,i+1], color="L=-1")) +  
+      geom_line(data=mylist$L0.5, aes(x=days, y=mylist$L0.5[,i+1], color="L=0.5")) + 
+      geom_line(data=mylist$L1, aes(x=days, y=mylist$L1[,i+1], color="L=1")) + 
+      geom_line(data=mylist$L3, aes(x=days, y=mylist$L3[,i+1], color="L=3")) +
+      geom_line(data=mylist$fieldref, aes(x=days, y=mylist$fieldref[,i+1], color="Field saturated water content"))+
+      geom_line(data=mylist$K6, aes(x=days, y=mylist$K6[,i+1], color="K(-6)")) +
+      geom_line(data=mylist$K6WT, aes(x=days, y=mylist$K6WT[,i+1], color="K(-6) and lowered water table")) +
+      scale_color_manual(values=c("Measured"="black", "L=2.3"="red","L=-2"="blue","L=-1"="yellow","L=0.5"="brown","L=1"="green",
+                                  "L=3"="orange", "Field saturated water content"="turquoise","K(-6)"="purple",
+                                  "K(-6) and lowered water table" ="darkgrey")) +
+      xlab("Time") +
+      ylab(paste("Pressure potential (hPa)","sensor",as.character(sens.idx[i]),sep=" ")) +
+      theme_bw() + theme(legend.title=element_blank())
+    print(p1)
+  })
 }
+
+dfmeas<-data.frame("days"=rep(seq(0,142,1), times=20),"data"=unlist(as.numeric(press.day[,i])),
+                   "id"=rep(c("Sensor 1","Sensor 2","Sensor 3","Sensor 4","Sensor 5","Sensor 6","Sensor 7",
+                              "Sensor 8","Sensor 9","Sensor 10","Sensor 11","Sensor 12","Sensor 13","Sensor 14",
+                              "Sensor 15","Sensor 16","Sensor 17","Sensor 18","Sensor 19","Sensor 20"),each=143))
+# plot as correlation plots 
+  mydf<-data.frame("days"=rep(seq(0,142,1),times=(9*20)), "data"=c(
+                                                                   unlist(m.model[,1:20]),
+                                                                   unlist(mylist$`L-2`[,2:21]),
+                                                                   unlist(mylist$`L-1`[,2:21]),
+                                                                   unlist(mylist$L0.5[,2:21]),
+                                                                   unlist(mylist$L1[,2:21]),
+                                                                   unlist(mylist$L3[,2:21]),
+                                                                   unlist(mylist$fieldref[,2:21]),
+                                                                   unlist(mylist$K6[,2:21]),
+                                                                   unlist(mylist$K6WT[,2:21])),
+                 "id"=rep(c("Sensor 1","Sensor 2","Sensor 3","Sensor 4","Sensor 5","Sensor 6","Sensor 7",
+                            "Sensor 8","Sensor 9","Sensor 10","Sensor 11","Sensor 12","Sensor 13","Sensor 14",
+                            "Sensor 15","Sensor 16","Sensor 17","Sensor 18","Sensor 19","Sensor 20"),each=143, times=9),
+                 "type"=rep(c("L=2.3","L=-2","L=-1","L=0.5","L=1","L=3",
+                              "field saturated water content","K(-6)","K(-6) and lowered water table"), each=143*20))
+
+  
+mydf$id<-factor(mydf$id, levels=c("Sensor 1","Sensor 2","Sensor 3","Sensor 4","Sensor 5","Sensor 6","Sensor 7",
+                          "Sensor 8","Sensor 9","Sensor 10","Sensor 11","Sensor 12","Sensor 13","Sensor 14",
+                          "Sensor 15","Sensor 16","Sensor 17","Sensor 18","Sensor 19","Sensor 20"))  
+
+mydf$type<-factor(mydf$type, levels=c("L=-2","L=-1","L=0.5","L=1","L=2.3","L=3",
+                    "field saturated water content","K(-6)","K(-6) and lowered water table"))
+     
+g<-ggplot(mydf, aes(x=rep(log10(-dfmeas$data),times=9), y=log10(-data)))+
+  geom_smooth(method="lm", se=FALSE, aes(color=type)) +
+  facet_wrap(~id)+
+  #geom_point(aes(shape=type, color=type), alpha=0.4, size=2) +
+  geom_abline(slope=1,intercept=0, lty=2, lwd=1.4) +
+  scale_shape_manual(values=c("L=2.3"=1,"L=-2"=1,"L=-1"=1,"L=0.5"=1,"L=1"=1,"L=3"=1,
+                              "field saturated water content"=2, "K(-6)"=0, "K(-6) and lowered water table"=0))+
+  scale_color_manual(values=c("L=2.3"="black","L=-2"="black","L=-1"="black","L=0.5"="black","L=1"="black","L=3"="black",
+                              "field saturated water content"="green", "K(-6)"="blue", "K(-6) and lowered water table"="red"))+
+  guides(colour = guide_legend(override.aes = list(alpha = 1)))+
+  labs(x="Log measured pressure potential (-hPa)", y="Log predicted pressure potential (-hPa)") +
+  lims(x=c(0,log10(3500)),y=c(0,log10(3500)))+
+  theme_bw() + theme(legend.title=element_blank(), legend.text=element_text(size=13), axis.text=element_text(size=11),
+                     axis.title=element_text(size=13), strip.text=element_text(size=13),
+                     legend.position="bottom", panel.grid=element_blank())
 
 
 # Volumetric water content

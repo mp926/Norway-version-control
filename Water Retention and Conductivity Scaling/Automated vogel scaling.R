@@ -111,10 +111,17 @@ df.par$tau<-rep(0.5,times=130)
 
 
 
-# exclude Ks values that are less than 1 cm/d (low outliers)
-# idx<-which(Ks[,2]>1)
-# df.par$Ks[idx]<-Ks$`Ksat (cm/d)`[idx]
-# df.par$tau[idx]<-0.5
+# find outlier values for Ks (to know which to remove for the depth v. Ks relationship)
+
+is_outlier<-function(x) {
+  return(x < quantile(x, 0.25, na.rm=TRUE) - 1.5 * IQR(x, na.rm=TRUE) | x > quantile(x, 0.75, na.rm=TRUE) + 1.5 * IQR(x, na.rm=TRUE))
+}
+
+
+idx<-which(is_outlier(df.par$Ks))
+Ks.corr<-df.par$Ks[-idx] # Ks with outlier values removed 
+
+
 
 
 # Apply function "Ku" from package "Soil HyP" to determine conductivity curves -----------------
@@ -236,6 +243,7 @@ ref.par<-data.frame(ans.field$par)
 
 
 # Save fitting output to avoid long fitting times
+setwd("C:\\Users\\Matt\\Documents")
 save(ans, file="WRC fit output.RData")
 save(ans.lab, file="WRC fit output lab only.RData")
 save(ans.field, file="WRC fit output field only.RData")
@@ -572,14 +580,16 @@ library(ggplot2)
 
 g<-ggplot() +
   facet_wrap(~id)+
-    geom_point(data=dat.2016,aes(x=log10(h), y=theta, color="Measured")) +
-    geom_line(data=plotdf, aes(x=log10(sch), y=scth, color="Scaled"), lwd=1.4) +
-    scale_color_manual(values=c("Measured"= "black","Scaled" = "red")) +
-    labs(x="log pressure potential (cm)", y="Volumetric water content")+
+    geom_point(data=dat.2016,aes(x=log10(h), y=theta, shape="Measured")) +
+    geom_line(data=plotdf, aes(x=log10(sch), y=scth, lty="Scaled"), color="red", lwd=1.4) +
+    scale_shape_manual(values=c("Measured" = 16, "Scaled" = NA))+
+    scale_linetype_manual(values=c("Measured" = NA, "Scaled" = 1))+
+    labs(x="log pressure potential (cm)", y=expression("Volumetric water content  "~(cm^3 ~ cm^-3)))+
   theme_bw() +
-  theme(legend.title=element_blank(), legend.position=c(0.9,0.05),
+  theme(legend.title=element_blank(), legend.position=c(0.86,0.05),
         legend.background=element_blank(), legend.text=element_text(size=13),
-        strip.text=element_text(size=12), axis.text=element_text(size=13),axis.title=element_text(size=13)) 
+        strip.text=element_text(size=12), axis.text=element_text(size=13),axis.title=element_text(size=13),
+        legend.spacing.y= unit(0.01, 'cm')) 
 
 
 # Calculate the RMSE for each of the measured vs. scaled retentions
@@ -617,7 +627,7 @@ errplot<-data.frame("err"=err, "depth"= depth, "ERTcluster"=cluster, "dist"= dis
 
 g2<-ggplot(errplot, aes(x=ERTcluster, y=err)) +
     geom_boxplot(varwidth=TRUE,fill="grey") + # boxes are drawn with widths proportional to the square-roots of the number of observations in the groups (thinner = less observations)
-    labs(x="ERT cluster", y="Root mean square error meas WRC v. scaled WRC") +
+    labs(x="ERT cluster", y="Root mean square error") +
   theme_bw() + theme(axis.text=element_text(size=13),axis.title=element_text(size=13))
 
 g3<-ggplot(errplot, aes(x=dist, y=err, color=cluster, shape=cluster))+
